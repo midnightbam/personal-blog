@@ -1,13 +1,14 @@
-import './App.css'
+import React from 'react';
+import NavBar from './components/NavBar';
+import HeroSection from './components/HeroSection';
 
-function App() {
+const App = () => {
   return (
-    <section className="p-8 text-center">
-      <h1 className="text-3xl font-bold text-blue-600">
-        My First React App on Vite
-      </h1>
-    </section>
+    <div className="min-h-screen bg-white">
+      <NavBar />
+      <HeroSection />
+    </div>
   );
-}
+};
 
 export default App;
