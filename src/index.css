@@ -1,9 +1,16 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200..1000;1,200..1000&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
 @import 'tailwindcss/base';
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 /* Removed unsupported @plugin "tailwindcss-animate"; */
 
 /* Removed unsupported @custom-variant dark (&:is(.dark *)); */
+html, body, input, button, textarea, select {
+  font-family: "Mulish", sans-serif !important;;
+  font-optical-sizing: auto;
+}
 
 :root {
   --radius-sm: calc(var(--radius) - 4px);
@@ -123,7 +130,7 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
-/* 
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -136,4 +143,4 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
-} */
+}
