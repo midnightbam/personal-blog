@@ -131,7 +131,7 @@ html, body, input, button, textarea, select {
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
-@layer base {
+/* @layer base {
   * {
     border-color: var(--color-border);
     outline-color: var(--color-ring);
@@ -143,4 +143,4 @@ html, body, input, button, textarea, select {
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
-}
+} */

@@ -26,7 +26,7 @@ const blogPosts = [
   {
     id: 3,
     image: "/src/assets/img-1.png",
-    category: "Cat",
+    category: "General",
     title: "Finding Motivation: How to Stay Inspired Through Life's Challenges",
     description: "This article explores strategies to maintain motivation when faced with personal or professional challenges. From setting small goals to practicing mindfulness and self-compassion, discover how to keep your drive alive during tough times.",
     author: "Thompson P.",
@@ -48,7 +48,7 @@ const blogPosts = [
   {
     id: 5,
     image: "/src/assets/img-2.png",
-    category: "Cat",
+    category: "Inspiration",
     title: "Unlocking Creativity: Simple Habits to Spark Inspiration Daily",
     description: "Learn practical ways to nurture creativity in your everyday life. Whether it's journaling, exploring new hobbies, or adjusting your routine, this article arms you with tools to tap into your creative potential and think outside the box.",
     author: "Thompson P.",
