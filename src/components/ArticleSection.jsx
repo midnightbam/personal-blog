@@ -1,5 +1,7 @@
 import React from 'react';
 import { Search } from 'lucide-react';
+import BlogCard from './BlogCard';
+import blogPosts from '../data/blogPosts';
 
 const ArticleSection = () => {
   return (
@@ -14,7 +16,6 @@ const ArticleSection = () => {
         <div className="hidden lg:block">
           <div className="bg-[#EFEEEB] rounded-2xl shadow-sm p-6 flex items-center justify-between gap-6">
             {/* Category Buttons */}
-                        {/* Category Buttons */}
             <div className="flex items-center gap-3">
               <button className="px-6 py-2.5 font-medium rounded-lg transition-colors bg-[#DAD6D1] text-[#43403B]">
                 Highlight
@@ -71,8 +72,24 @@ const ArticleSection = () => {
             </div>
           </div>
         </div>
+
+        {/* Blog Cards Grid - ส่วนที่เพิ่มเข้ามาใหม่ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+          {blogPosts.map((post) => (
+            <BlogCard
+              key={post.id}
+              image={post.image}
+              category={post.category}
+              title={post.title}
+              description={post.description}
+              author={post.author}
+              date={post.date}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );
 };
+
 export default ArticleSection;
