@@ -4,6 +4,9 @@ import BlogCard from './BlogCard';
 import blogPosts from '../data/blogPosts';
 
 const ArticleSection = () => {
+  // Array ของ Categories
+  const categories = ["Highlight", "Cat", "Inspiration", "General"];
+
   return (
     <section className="bg-gray-50 py-12 lg:py-16">
       <div className="px-4 sm:px-6 md:px-8 lg:px-12 max-w-[1400px] mx-auto">
@@ -15,20 +18,20 @@ const ArticleSection = () => {
         {/* Desktop Layout */}
         <div className="hidden lg:block">
           <div className="bg-[#EFEEEB] rounded-2xl shadow-sm p-6 flex items-center justify-between gap-6">
-            {/* Category Buttons */}
+            {/* Category Buttons - ใช้ Array.map() */}
             <div className="flex items-center gap-3">
-              <button className="px-6 py-2.5 font-medium rounded-lg transition-colors bg-[#DAD6D1] text-[#43403B]">
-                Highlight
-              </button>
-              <button className="px-6 py-2.5 font-medium rounded-lg transition-colors bg-[#EFEEEB] text-[#75716B] hover:bg-[#DAD6D1] hover:text-[#43403B]">
-                Cat
-              </button>
-              <button className="px-6 py-2.5 font-medium rounded-lg transition-colors bg-[#EFEEEB] text-[#75716B] hover:bg-[#DAD6D1] hover:text-[#43403B]">
-                Inspiration
-              </button>
-              <button className="px-6 py-2.5 font-medium rounded-lg transition-colors bg-[#EFEEEB] text-[#75716B] hover:bg-[#DAD6D1] hover:text-[#43403B]">
-                General
-              </button>
+              {categories.map((category, index) => (
+                <button
+                  key={category}
+                  className={`px-6 py-2.5 font-medium rounded-lg transition-colors ${
+                    index === 0
+                      ? 'bg-[#DAD6D1] text-[#43403B]'
+                      : 'bg-[#EFEEEB] text-[#75716B] hover:bg-[#DAD6D1] hover:text-[#43403B]'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
             </div>
 
             {/* Search Input */}
@@ -58,13 +61,14 @@ const ArticleSection = () => {
           {/* Category Label */}
           <div>
             <label className="block text-gray-500 font-medium mb-3 text-lg">Category</label>
-            {/* Category Dropdown */}
+            {/* Category Dropdown - ใช้ Array.map() */}
             <div className="relative">
               <select className="w-full px-6 py-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-300 text-gray-600 text-lg appearance-none shadow-sm">
-                <option>Highlight</option>
-                <option>Cat</option>
-                <option>Inspiration</option>
-                <option>General</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
               </select>
               <svg className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -73,7 +77,7 @@ const ArticleSection = () => {
           </div>
         </div>
 
-        {/* Blog Cards Grid - ส่วนที่เพิ่มเข้ามาใหม่ */}
+        {/* Blog Cards Grid - ใช้ Array.map() */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
           {blogPosts.map((post) => (
             <BlogCard
