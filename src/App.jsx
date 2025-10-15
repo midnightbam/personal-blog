@@ -5,39 +5,41 @@ import HeroSection from './components/HeroSection';
 import Footer from './components/Footer';
 import ArticleSection from './components/ArticleSection';
 import SignUpForm from './components/SignUpForm';
-import LoginForm from './components/LoginForm'; // ✅ import login form
+import LoginForm from './components/LoginForm'; 
+import RegistrationSuccess from './components/RegistrationSuccess';
+import UserNavbar from './components/UserNavbar';
+import Profile from "./components/Profile";
+import ResetPassword from "./components/ResetPassword";
 
-const HomePage = () => {
-  return (
-    <>
-      <HeroSection />
-      <ArticleSection />
-    </>
-  );
-};
 
-const SignUpPage = () => {
-  return (
-    <>
-      <SignUpForm />
-    </>
-  );
-};
+const HomePage = () => (
+  <>
+    <HeroSection />
+    <ArticleSection />
+  </>
+);
 
-const LoginPage = () => {
-  return (
-    <>
-      <LoginForm />
-    </>
-  );
-};
+const SignUpPage = () => (
+  <>
+    <SignUpForm />
+  </>
+);
+
+const LoginPage = () => (
+  <>
+    <LoginForm />
+  </>
+);
 
 const App = () => {
+  // ✅ Check login status
+  const user = JSON.parse(localStorage.getItem("user"));
+
   return (
     <Router>
       <div className="min-h-screen bg-white flex flex-col">
-        {/* ✅ Navbar always at top */}
-        <NavBar />
+        {/* ✅ Conditionally render navbar */}
+        {user ? <UserNavbar /> : <NavBar />}
 
         {/* ✅ Page content */}
         <div className="flex-grow">
@@ -45,6 +47,10 @@ const App = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/success" element={<RegistrationSuccess />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
           </Routes>
         </div>
 

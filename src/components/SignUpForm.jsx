@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const SignUpForm = () => {
   const [formData, setFormData] = useState({
@@ -9,6 +10,13 @@ const SignUpForm = () => {
     password: "",
   });
 
+  const [touched, setTouched] = useState({
+    email: false,
+    password: false,
+  });
+
+  const navigate = useNavigate();
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -16,10 +24,46 @@ const SignUpForm = () => {
     });
   };
 
+  const handleBlur = (field) => {
+    setTouched({
+      ...touched,
+      [field]: true,
+    });
+  };
+
+  // Email validation
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Password validation
+  const isValidPassword = (password) => {
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    return password.length >= 6 && hasLetter && hasNumber;
+  };
+
+  const showEmailError = touched.email && formData.email && !isValidEmail(formData.email);
+  const showPasswordError = touched.password && formData.password && !isValidPassword(formData.password);
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Validate before submission
+    if (!isValidEmail(formData.email) || !isValidPassword(formData.password)) {
+      setTouched({ email: true, password: true });
+      return;
+    }
+
     console.log("Sign up submitted:", formData);
-    // Add signup logic here
+
+    // Simulate successful signup
+    setTimeout(() => {
+      const userData = { ...formData };
+      delete userData.password; // Don't store password in memory
+      navigate("/success");
+    }, 500);
   };
 
   return (
@@ -85,9 +129,17 @@ const SignUpForm = () => {
               placeholder="Email"
               value={formData.email}
               onChange={handleChange}
-              className="flex h-10 w-full border border-gray-300 bg-white px-3 text-sm rounded-lg focus-visible:outline-none focus-visible:border-gray-500 transition"
+              onBlur={() => handleBlur('email')}
+              className={`flex h-10 w-full border ${
+                showEmailError ? 'border-red-500' : 'border-gray-300'
+              } bg-white px-3 text-sm rounded-lg focus-visible:outline-none focus-visible:border-gray-500 transition`}
               required
             />
+            {showEmailError && (
+              <p className="text-red-600 text-xs mt-1">
+                Email must be a valid email
+              </p>
+            )}
           </div>
 
           {/* Password */}
@@ -105,9 +157,17 @@ const SignUpForm = () => {
               placeholder="Password"
               value={formData.password}
               onChange={handleChange}
-              className="flex h-10 w-full border border-gray-300 bg-white px-3 text-sm rounded-lg focus-visible:outline-none focus-visible:border-gray-500 transition"
+              onBlur={() => handleBlur('password')}
+              className={`flex h-10 w-full border ${
+                showPasswordError ? 'border-red-500' : 'border-gray-300'
+              } bg-white px-3 text-sm rounded-lg focus-visible:outline-none focus-visible:border-gray-500 transition`}
               required
             />
+            {showPasswordError && (
+              <p className="text-red-600 text-xs mt-1">
+                Password must be at least 6 characters and must contain letters and numbers
+              </p>
+            )}
           </div>
 
           {/* Submit */}
