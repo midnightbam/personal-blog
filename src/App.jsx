@@ -10,7 +10,7 @@ import RegistrationSuccess from './components/RegistrationSuccess';
 import UserNavbar from './components/UserNavbar';
 import Profile from "./components/Profile";
 import ResetPassword from "./components/ResetPassword";
-
+import ViewPost from "./pages/ViewPostPage"; 
 
 const HomePage = () => (
   <>
@@ -50,7 +50,7 @@ const App = () => {
             <Route path="/success" element={<RegistrationSuccess />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-
+            <Route path="/post/:postId" element={<ViewPost />} /> 
           </Routes>
         </div>
 

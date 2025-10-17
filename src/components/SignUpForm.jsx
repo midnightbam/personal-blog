@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 
 const SignUpForm = () => {
   const [formData, setFormData] = useState({
@@ -15,6 +15,9 @@ const SignUpForm = () => {
     password: false,
   });
 
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -22,6 +25,7 @@ const SignUpForm = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    setError(""); // Clear error when user types
   };
 
   const handleBlur = (field) => {
@@ -47,7 +51,7 @@ const SignUpForm = () => {
   const showEmailError = touched.email && formData.email && !isValidEmail(formData.email);
   const showPasswordError = touched.password && formData.password && !isValidPassword(formData.password);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validate before submission
@@ -56,14 +60,48 @@ const SignUpForm = () => {
       return;
     }
 
-    console.log("Sign up submitted:", formData);
+    setError("");
+    setLoading(true);
 
-    // Simulate successful signup
-    setTimeout(() => {
-      const userData = { ...formData };
-      delete userData.password; // Don't store password in memory
-      navigate("/success");
-    }, 500);
+    try {
+      // Sign up the user with Supabase
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name,
+            username: formData.username,
+          },
+        },
+      });
+
+      if (authError) throw authError;
+
+      // Check if email confirmation is required
+      if (authData?.user?.identities?.length === 0) {
+        setError("This email is already registered. Please log in instead.");
+        return;
+      }
+
+      console.log("User signed up:", authData.user);
+
+      // If email confirmation is enabled, show message
+      if (authData.user && !authData.session) {
+        navigate("/success", { 
+          state: { 
+            message: "Please check your email to confirm your account before logging in." 
+          } 
+        });
+      } else {
+        // If no email confirmation needed, redirect to home
+        navigate("/");
+      }
+    } catch (error) {
+      setError(error.message || "Failed to sign up. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -170,13 +208,20 @@ const SignUpForm = () => {
             )}
           </div>
 
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
           {/* Submit */}
           <div className="flex justify-center">
             <button
               type="submit"
-              className="px-8 py-2 bg-[#26231E] text-white rounded-full hover:bg-[#3d3832] transition-colors text-sm font-medium"
+              className="px-8 py-2 bg-[#26231E] text-white rounded-full hover:bg-[#3d3832] transition-colors text-sm font-medium disabled:opacity-50"
+              disabled={loading}
             >
-              Sign up
+              {loading ? "Signing up..." : "Sign up"}
             </button>
           </div>
         </form>
