@@ -1,4 +1,5 @@
 # 📝 Personal Blog Platform
+⚠️ Project Status: This project is currently under active development. Some features may be incomplete or subject to change.
 
 **Personal Blog Platform** is a full-stack blogging application that enables writers to create and publish content while providing readers with a seamless browsing experience. The platform features a comprehensive content management system (CMS) for administrators, article categorization, author profiles, and interactive elements like comments and likes to foster a vibrant community.
 
