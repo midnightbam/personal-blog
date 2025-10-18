@@ -1,15 +1,15 @@
-import NavBar from "@/components/NavBar";
-import Footer from "@/components/Footer";
-import ViewPost from "@/components/ViewPost";
+// src/pages/HomePage.jsx
+import React from 'react';
+import HeroSection from '../components/HeroSection';
+import ArticleSection from '../components/ArticleSection';
 
-export default function ViewPostPage() {
+const HomePage = () => {
   return (
-    <div className="flex flex-col min-h-screen">
-      <NavBar />
-      <div className="flex-grow">
-        <ViewPost />
-      </div>
-      <Footer />
+    <div>
+      <HeroSection />
+      <ArticleSection />
     </div>
   );
-}
+};
+
+export default HomePage;
