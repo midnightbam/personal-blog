@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { authService } from "../lib/auth";
 
 const SignUpForm = () => {
   const [formData, setFormData] = useState({
@@ -64,19 +64,15 @@ const SignUpForm = () => {
     setLoading(true);
 
     try {
-      // Sign up the user with Supabase
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            name: formData.name,
-            username: formData.username,
-          },
-        },
-      });
-
-      if (authError) throw authError;
+      // Sign up the user using auth service
+      const authData = await authService.signup(
+        formData.email,
+        formData.password,
+        {
+          name: formData.name,
+          username: formData.username,
+        }
+      );
 
       // Check if email confirmation is required
       if (authData?.user?.identities?.length === 0) {

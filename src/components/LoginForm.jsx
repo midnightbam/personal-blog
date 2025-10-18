@@ -23,22 +23,15 @@ const LoginForm = () => {
     setError(""); // Clear error when user types
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (error) throw error;
-
-      // Successfully logged in
+      const data = await authService.login(formData.email, formData.password);
       console.log("User logged in:", data.user);
-      navigate("/"); // Redirect to home or dashboard
+      navigate("/");
     } catch (error) {
       setError(error.message || "Failed to log in. Please try again.");
     } finally {
@@ -53,12 +46,11 @@ const LoginForm = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) throw error;
-
+      await authService.sendPasswordReset(
+        resetEmail,
+        `${window.location.origin}/reset-password`
+      );
+      
       setResetMessage("Password reset link sent! Check your email.");
       setTimeout(() => {
         setShowForgotPassword(false);

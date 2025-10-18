@@ -7,8 +7,14 @@ import {
   SmilePlus,
   Copy,
   Loader2,
-  ArrowLeft,
+  X,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Mock data
 const comments = [
@@ -45,6 +51,9 @@ export default function ViewPost() {
   const [error, setError] = useState(null);
   const [commentText, setCommentText] = useState("");
   const [likes, setLikes] = useState(0);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
     const getPost = async () => {
@@ -82,13 +91,18 @@ export default function ViewPost() {
     setLikes(prev => prev + 1);
   };
 
+  const handleShowToast = () => {
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
+
   if (isLoading) {
     return <LoadingScreen />;
   }
 
   if (error || !post) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#F9F8F6] flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 text-lg mb-4">
             {error || 'Failed to load article'}
@@ -105,38 +119,34 @@ export default function ViewPost() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Image with Overlay */}
-      <div className="w-full h-64 sm:h-80 lg:h-96 relative">
+    <div className="min-h-screen bg-[#F9F8F6]">
+      <div className="lg:hidden w-full h-64 relative mb-6">
         <img 
           src={post.image} 
           alt={post.title}
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        
-        {/* Back Button */}
-        <button 
-          onClick={handleBack}
-          className="absolute top-6 left-6 flex items-center gap-2 text-white hover:text-gray-200 transition-colors bg-black/30 px-4 py-2 rounded-full backdrop-blur-sm"
-        >
-          <ArrowLeft size={20} />
-          <span className="font-medium">Back</span>
-        </button>
       </div>
 
-      {/* Content Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative z-10">
-        <div className="flex flex-col xl:flex-row gap-8">
-          {/* Main Content */}
-          <div className="xl:w-3/4">
-            <div className="bg-white rounded-lg shadow-lg p-6 sm:p-8 lg:p-10 mb-8">
-              {/* Category and Date */}
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                <span className="bg-green-100 rounded-full px-4 py-1.5 text-sm font-semibold text-green-700">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 lg:pt-6 relative">
+        <div className="hidden lg:block mb-6">
+          <div className="w-full h-96 relative rounded-2xl overflow-hidden">
+            <img 
+              src={post.image} 
+              alt={post.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+        
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="lg:w-2/3">
+            <div className="mb-5">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <span className="bg-green-100 rounded-full px-3 py-1 text-xs font-semibold text-green-700">
                   {post.category}
                 </span>
-                <span className="text-sm text-gray-500">
+                <span className="text-xs text-gray-500">
                   {new Date(post.date).toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "long",
@@ -145,35 +155,32 @@ export default function ViewPost() {
                 </span>
               </div>
 
-              {/* Title */}
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 leading-tight">
                 {post.title}
               </h1>
 
-              {/* Description */}
-              <p className="text-gray-700 text-lg leading-relaxed mb-8 pb-8 border-b border-gray-200">
+              <p className="text-gray-600 text-sm leading-relaxed mb-5 pb-5 border-b border-gray-200">
                 {post.description}
               </p>
 
-              {/* Article Content */}
-              <div className="prose prose-lg max-w-none mb-8">
-                <div className="text-gray-700 space-y-4">
+              <div className="prose prose-sm max-w-none">
+                <div className="text-gray-700 space-y-3 text-sm leading-relaxed">
                   {post.content.split('\n\n').map((paragraph, idx) => {
                     if (paragraph.startsWith('## ')) {
-                      return <h2 key={idx} className="text-3xl font-bold mt-8 mb-4 text-gray-900">{paragraph.replace('## ', '')}</h2>;
+                      return <h2 key={idx} className="text-lg font-bold mt-5 mb-2 text-gray-900">{paragraph.replace('## ', '')}</h2>;
                     } else if (paragraph.startsWith('### ')) {
-                      return <h3 key={idx} className="text-2xl font-bold mt-6 mb-3 text-gray-900">{paragraph.replace('### ', '')}</h3>;
+                      return <h3 key={idx} className="text-base font-bold mt-4 mb-2 text-gray-900">{paragraph.replace('### ', '')}</h3>;
                     } else if (paragraph.startsWith('- ')) {
                       const items = paragraph.split('\n').filter(line => line.startsWith('- '));
                       return (
-                        <ul key={idx} className="list-disc list-inside space-y-2 mb-4">
+                        <ul key={idx} className="list-disc list-inside space-y-1 mb-3 ml-2">
                           {items.map((item, i) => (
-                            <li key={i}>{item.replace('- ', '')}</li>
+                            <li key={i} className="text-sm">{item.replace('- ', '')}</li>
                           ))}
                         </ul>
                       );
                     } else if (paragraph.trim()) {
-                      return <p key={idx} className="leading-relaxed">{paragraph}</p>;
+                      return <p key={idx} className="leading-relaxed text-sm">{paragraph}</p>;
                     }
                     return null;
                   })}
@@ -181,41 +188,103 @@ export default function ViewPost() {
               </div>
             </div>
 
-            {/* Author Bio - Mobile */}
-            <div className="xl:hidden mb-8">
+            <div className="lg:hidden mb-5">
               <AuthorBio />
             </div>
 
-            {/* Share Section */}
-            <Share likes={likes} onLike={handleLike} />
+            <Share likes={likes} onLike={handleLike} onShowToast={handleShowToast} />
 
-            {/* Comments Section */}
-            <Comment commentText={commentText} setCommentText={setCommentText} />
+            <Comment 
+              commentText={commentText} 
+              setCommentText={setCommentText}
+              isLoggedIn={isLoggedIn}
+              onShowAuthDialog={() => setShowAuthDialog(true)}
+            />
           </div>
 
-          {/* Sidebar - Desktop */}
-          <div className="hidden xl:block xl:w-1/4">
-            <div className="sticky top-8">
+          <div className="hidden lg:block lg:w-1/3">
+            <div className="sticky top-24">
               <AuthorBio />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Spacing */}
-      <div className="h-16"></div>
+      <div className="h-8"></div>
+
+      {/* Custom Toast Notification */}
+     {showToast && (
+  <div className="fixed bottom-6 right-6 z-50">
+    <div className="bg-green-500 text-white rounded-xl shadow-lg px-6 py-4 flex items-center gap-3 min-w-[320px]">
+      <div className="flex-1">
+        <p className="font-bold text-base mb-1">Copied!</p>
+        <p className="text-sm">This article has been copied to your clipboard.</p>
+      </div>
+      <button
+        onClick={() => setShowToast(false)}
+        className="text-white hover:text-gray-200 transition-colors"
+      >
+        <X className="w-5 h-5" />
+      </button>
+    </div>
+  </div>
+)}
+
+      {/* Auth Dialog */}
+{/* Auth Dialog */}
+<AlertDialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+  <AlertDialogContent className="sm:max-w-[450px] rounded-3xl bg-white">
+    <button
+      onClick={() => setShowAuthDialog(false)}
+      className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none text-gray-900"
+    >
+      <X className="h-5 w-5" />
+      <span className="sr-only">Close</span>
+    </button>
+    
+<div className="flex flex-col items-center text-center pt-8 pb-4 px-4 sm:px-8">
+      <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8">
+        Create an account to<br />continue
+      </h2>
+      
+      <button
+        onClick={() => {
+          setShowAuthDialog(false);
+          navigate('/signup');
+        }}
+        className="w-full sm:w-auto bg-black text-white py-3 px-10 rounded-full font-medium hover:bg-gray-800 transition-colors mb-6 text-sm"
+      >
+        Create account
+      </button>
+      
+      <p className="text-sm sm:text-base text-gray-600">
+        Already have an account?{" "}
+        <button 
+          onClick={() => {
+            setShowAuthDialog(false);
+            navigate('/login');
+          }}
+          className="text-black font-semibold underline hover:no-underline"
+        >
+          Log in
+        </button>
+      </p>
+    </div>
+  </AlertDialogContent>
+</AlertDialog>
     </div>
   );
 }
 
-function Share({ likes, onLike }) {
+function Share({ likes, onLike, onShowToast }) {
   const shareLink = encodeURIComponent(window.location.href);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    onShowToast();
+    setTimeout(() => setCopied(false), 3000);
   };
 
   const handleShare = (platform) => {
@@ -229,49 +298,47 @@ function Share({ likes, onLike }) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-      <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
-        {/* Like Button */}
+    <div className="bg-[#EFEEEB] rounded-xl shadow-sm p-4 mb-5">
+      <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
         <button 
           onClick={onLike}
-          className="bg-gray-100 flex items-center justify-center gap-2 px-8 py-3 rounded-full text-gray-900 border-2 border-gray-900 hover:bg-gray-900 hover:text-white transition-all group"
+          className="bg-gray-50 flex items-center justify-center gap-2 px-5 py-2 rounded-full text-gray-900 border border-gray-300 hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all text-sm font-medium"
         >
-          <SmilePlus className="w-5 h-5" />
-          <span className="font-semibold">{likes}</span>
+          <SmilePlus className="w-4 h-4" />
+          <span>{likes}</span>
         </button>
 
-        {/* Share Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={handleCopy}
-            className="bg-gray-100 flex items-center justify-center gap-2 px-6 py-3 rounded-full text-gray-900 border-2 border-gray-900 hover:bg-gray-900 hover:text-white transition-all flex-1 sm:flex-none"
+            className="bg-gray-50 flex items-center justify-center gap-2 px-4 py-2 rounded-full text-gray-900 border border-gray-300 hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all text-sm font-medium flex-1 sm:flex-none"
           >
-            <Copy className="w-5 h-5" />
-            <span className="font-medium">{copied ? 'Copied!' : 'Copy'}</span>
+            <Copy className="w-4 h-4" />
+            <span>{copied ? 'Copied!' : 'Copy'}</span>
           </button>
           
           <button
             onClick={() => handleShare('facebook')}
-            className="bg-blue-600 hover:bg-blue-700 p-3 rounded-full text-white transition-colors border-2 border-blue-600"
+            className="bg-blue-600 hover:bg-blue-700 p-2 rounded-full text-white transition-colors"
             aria-label="Share on Facebook"
           >
-            <Facebook className="h-5 w-5" />
+            <Facebook className="h-4 w-4" />
           </button>
           
           <button
             onClick={() => handleShare('linkedin')}
-            className="bg-blue-700 hover:bg-blue-800 p-3 rounded-full text-white transition-colors border-2 border-blue-700"
+            className="bg-blue-700 hover:bg-blue-800 p-2 rounded-full text-white transition-colors"
             aria-label="Share on LinkedIn"
           >
-            <Linkedin className="h-5 w-5" />
+            <Linkedin className="h-4 w-4" />
           </button>
           
           <button
             onClick={() => handleShare('twitter')}
-            className="bg-sky-500 hover:bg-sky-600 p-3 rounded-full text-white transition-colors border-2 border-sky-500"
+            className="bg-sky-500 hover:bg-sky-600 p-2 rounded-full text-white transition-colors"
             aria-label="Share on Twitter"
           >
-            <Twitter className="h-5 w-5" />
+            <Twitter className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -279,8 +346,13 @@ function Share({ likes, onLike }) {
   );
 }
 
-function Comment({ commentText, setCommentText }) {
+function Comment({ commentText, setCommentText, isLoggedIn, onShowAuthDialog }) {
   const handleSubmit = () => {
+    if (!isLoggedIn) {
+      onShowAuthDialog();
+      return;
+    }
+    
     if (commentText.trim()) {
       console.log("Comment submitted:", commentText);
       setCommentText("");
@@ -288,21 +360,20 @@ function Comment({ commentText, setCommentText }) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 sm:p-8">
-      {/* Comment Form */}
-      <div className="mb-8">
-        <h3 className="text-2xl font-bold text-gray-900 mb-4">Leave a Comment</h3>
-        <div className="space-y-3">
+    <div className="mb-5">
+      <div className="mb-5">
+        <h3 className="text-base font-bold text-gray-900 mb-2.5">Leave a Comment</h3>
+        <div className="space-y-2">
           <textarea
             placeholder="What are your thoughts?"
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
-            className="w-full p-4 border-2 border-gray-300 rounded-lg resize-none focus:outline-none focus:border-gray-900 transition-colors h-32"
+            className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:border-gray-900 transition-colors h-20 text-sm"
           />
           <div className="flex justify-end">
             <button 
               onClick={handleSubmit}
-              className="px-8 py-2.5 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors font-medium"
+              className="px-5 py-1.5 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors text-sm font-medium"
             >
               Send
             </button>
@@ -310,25 +381,24 @@ function Comment({ commentText, setCommentText }) {
         </div>
       </div>
 
-      {/* Comments List */}
       <div>
-        <h3 className="text-2xl font-bold text-gray-900 mb-6">
+        <h3 className="text-base font-bold text-gray-900 mb-3">
           Comments ({comments.length})
         </h3>
-        <div className="space-y-6">
+        <div className="space-y-3">
           {comments.map((comment) => (
-            <div key={comment.id} className="flex gap-4 pb-6 border-b border-gray-200 last:border-b-0">
+            <div key={comment.id} className="flex gap-3 pb-3 border-b border-gray-200 last:border-b-0">
               <img
                 src={comment.image}
                 alt={comment.name}
-                className="rounded-full w-12 h-12 object-cover flex-shrink-0"
+                className="rounded-full w-9 h-9 object-cover flex-shrink-0"
               />
               <div className="flex-1">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
-                  <h4 className="font-semibold text-gray-900">{comment.name}</h4>
-                  <span className="text-sm text-gray-500">{comment.date}</span>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5 mb-1">
+                  <h4 className="font-semibold text-gray-900 text-sm">{comment.name}</h4>
+                  <span className="text-xs text-gray-500">{comment.date}</span>
                 </div>
-                <p className="text-gray-700 leading-relaxed">{comment.comment}</p>
+                <p className="text-gray-600 leading-relaxed text-xs">{comment.comment}</p>
               </div>
             </div>
           ))}
@@ -340,22 +410,22 @@ function Comment({ commentText, setCommentText }) {
 
 function AuthorBio() {
   return (
-    <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 shadow-lg border border-amber-100">
-      <div className="flex items-center mb-4">
-        <div className="w-16 h-16 rounded-full overflow-hidden mr-4 ring-2 ring-amber-200">
+    <div className="bg-[#EFEEEB] rounded-xl p-4 shadow-sm border border-[#EFEEEB]">
+      <div className="flex items-center mb-3">
+        <div className="w-12 h-12 rounded-full overflow-hidden mr-3 ring-2 ring-[#DAD6D1]">
           <img
             src={authorImage}
             alt="Thompson P."
-            className="object-cover w-16 h-16"
+            className="object-cover w-12 h-12"
           />
         </div>
         <div>
-          <p className="text-sm text-gray-600 font-medium">Author</p>
-          <h3 className="text-2xl font-bold text-gray-900">Thompson P.</h3>
+          <p className="text-xs text-gray-600 font-medium">Author</p>
+          <h3 className="text-base font-bold text-gray-900">Thompson P.</h3>
         </div>
       </div>
-      <hr className="border-amber-200 mb-4" />
-      <div className="text-gray-700 space-y-3 text-sm leading-relaxed">
+      <hr className="border-[#DAD6D1] mb-3" />
+      <div className="text-gray-700 space-y-2 text-xs leading-relaxed">
         <p>
           I am a pet enthusiast and freelance writer who specializes in animal
           behavior and care. With a deep love for cats, I enjoy sharing insights
@@ -372,7 +442,7 @@ function AuthorBio() {
 
 function LoadingScreen() {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gray-50">
+    <div className="fixed inset-0 flex items-center justify-center bg-[#F9F8F6]">
       <div className="flex flex-col items-center">
         <Loader2 className="w-16 h-16 animate-spin text-gray-900" />
         <p className="mt-4 text-lg font-semibold text-gray-700">Loading article...</p>

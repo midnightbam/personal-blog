@@ -1,65 +1,38 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import NavBar from './components/Navbar';
-import HeroSection from './components/HeroSection';
+// App.jsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import NavBar from './components/NavBar';
 import Footer from './components/Footer';
-import ArticleSection from './components/ArticleSection';
-import SignUpForm from './components/SignUpForm';
-import LoginForm from './components/LoginForm'; 
-import RegistrationSuccess from './components/RegistrationSuccess';
-import UserNavbar from './components/UserNavbar';
-import Profile from "./components/Profile";
-import ResetPassword from "./components/ResetPassword";
-import ViewPost from "./pages/ViewPostPage"; 
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import SignUpPage from './pages/SignUpPage';
+import RegistrationSuccessPage from './pages/RegistrationSuccessPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ProfilePage from './pages/ProfilePage';
+import ViewPostPage from './pages/ViewPostPage';
+import NotFoundPage from './pages/NotFoundPage';
+import { Toaster } from "@/components/ui/sonner"
 
-const HomePage = () => (
-  <>
-    <HeroSection />
-    <ArticleSection />
-  </>
-);
-
-const SignUpPage = () => (
-  <>
-    <SignUpForm />
-  </>
-);
-
-const LoginPage = () => (
-  <>
-    <LoginForm />
-  </>
-);
-
-const App = () => {
-  // ✅ Check login status
-  const user = JSON.parse(localStorage.getItem("user"));
-
+function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-white flex flex-col">
-        {/* ✅ Conditionally render navbar */}
-        {user ? <UserNavbar /> : <NavBar />}
-
-        {/* ✅ Page content */}
+    <BrowserRouter>
+      <div className="flex flex-col min-h-screen">
+        <NavBar />
         <div className="flex-grow">
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/signup" element={<SignUpPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/success" element={<RegistrationSuccess />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/post/:postId" element={<ViewPost />} /> 
+            <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/success" element={<RegistrationSuccessPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/post/:postId" element={<ViewPostPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </div>
-
-        {/* ✅ Footer always at bottom */}
         <Footer />
       </div>
-    </Router>
+    </BrowserRouter>
   );
-};
+}
 
 export default App;
-export { NavBar, HeroSection, Footer };
