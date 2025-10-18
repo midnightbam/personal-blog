@@ -4,7 +4,7 @@ import NavBar from './components/Navbar';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
-import SignUpPage from './pages/SignUpPage';
+import SignUpPage from './pages/SignupPage';
 import RegistrationSuccessPage from './pages/RegistrationSuccessPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ProfilePage from './pages/ProfilePage';
