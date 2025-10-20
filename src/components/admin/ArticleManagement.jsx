@@ -78,7 +78,7 @@ export default function ArticleManagement({ onCreateClick, onEditClick }) {
   return (
     <div className="flex-1 bg-white min-h-screen">
       {/* Navbar */}
-      <div className="bg-white border-b border-stone-200 px-8 h-[56px] flex items-center justify-between">
+<div className="sticky top-0 z-10 bg-white border-b border-stone-200 px-8 h-[56px] flex items-center justify-between">
   <h1 className="text-lg font-semibold text-stone-800">Article management</h1>
   <button
     onClick={onCreateClick}
