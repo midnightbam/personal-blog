@@ -2,11 +2,26 @@ import React, { useState } from 'react';
 import { FileText, Folder, User, Bell, Lock, ExternalLink, LogOut } from 'lucide-react';
 import ArticleManagement from "./admin/ArticleManagement";
 import ArticleForm from "./admin/ArticleForm";
+import CategoryManagement from "./admin/CategoryManagement";
+import CategoryForm from "./admin/CategoryForm";
+import Profile from "./admin/Profile";
+import DeleteModal from "./admin/DeleteModal";
 
 export default function AdminLayout() {
   const [activeSection, setActiveSection] = useState('Article management');
   const [currentView, setCurrentView] = useState('list'); // 'list', 'create', 'edit'
   const [editingArticle, setEditingArticle] = useState(null);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [alert, setAlert] = useState(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+
+  // Category state
+  const [categories, setCategories] = useState([
+    { id: 1, name: 'Cat' },
+    { id: 2, name: 'General' },
+    { id: 3, name: 'Inspiration' },
+  ]);
 
   const menuItems = [
     { icon: FileText, label: 'Article management' },
@@ -20,20 +35,67 @@ export default function AdminLayout() {
     setActiveSection(label);
     setCurrentView('list');
     setEditingArticle(null);
+    setEditingCategory(null);
+    setAlert(null);
   };
 
   const handleCreateArticle = () => {
     setCurrentView('create');
+    setAlert(null);
   };
 
   const handleEditArticle = (article) => {
     setEditingArticle(article);
     setCurrentView('edit');
+    setAlert(null);
   };
 
   const handleBackToList = () => {
     setCurrentView('list');
     setEditingArticle(null);
+    setEditingCategory(null);
+  };
+
+  // Category handlers
+  const handleCreateCategory = () => {
+    setCurrentView('create');
+    setEditingCategory(null);
+    setAlert(null);
+  };
+
+  const handleEditCategory = (category) => {
+    setEditingCategory(category);
+    setCurrentView('edit');
+    setAlert(null);
+  };
+
+  const handleSaveCategory = (categoryData) => {
+    if (currentView === 'create') {
+      setCategories([...categories, categoryData]);
+    } else {
+      setCategories(categories.map(cat => 
+        cat.id === categoryData.id ? categoryData : cat
+      ));
+    }
+    // Don't set currentView or alert here - let the CategoryForm handle it with toast
+  };
+
+  const handleDeleteCategory = (category) => {
+    setItemToDelete(category);
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (activeSection === 'Category management') {
+      setCategories(categories.filter(cat => cat.id !== itemToDelete.id));
+      setAlert({
+        type: 'success',
+        title: 'Delete category',
+        message: 'Category has been successfully deleted.'
+      });
+    }
+    setDeleteModalOpen(false);
+    setItemToDelete(null);
   };
 
   const renderContent = () => {
@@ -50,6 +112,41 @@ export default function AdminLayout() {
           />
         );
       }
+    }
+
+    if (activeSection === 'Category management') {
+      if (currentView === 'create') {
+        return (
+          <CategoryForm 
+            mode="create" 
+            onSave={handleSaveCategory}
+            onBack={handleBackToList}
+          />
+        );
+      } else if (currentView === 'edit') {
+        return (
+          <CategoryForm 
+            mode="edit" 
+            categoryData={editingCategory}
+            onSave={handleSaveCategory}
+            onBack={handleBackToList}
+          />
+        );
+      } else {
+        return (
+          <CategoryManagement 
+            categories={categories}
+            onCreateClick={handleCreateCategory}
+            onEditClick={handleEditCategory}
+            onDelete={handleDeleteCategory}
+            onBack={null}
+          />
+        );
+      }
+    }
+
+    if (activeSection === 'Profile') {
+      return <Profile onBack={null} />;
     }
 
     // Placeholder for other sections
@@ -111,6 +208,15 @@ export default function AdminLayout() {
           {renderContent()}
         </div>
       </div>
+
+      {/* Delete Modal */}
+      <DeleteModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete category"
+        message="Do you want to delete this category?"
+      />
     </div>
   );
 }
