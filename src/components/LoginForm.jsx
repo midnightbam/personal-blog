@@ -1,134 +1,87 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { useAuthContext } from "../contexts/AuthContext";
 
 const LoginForm = () => {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetMessage, setResetMessage] = useState("");
-
   const navigate = useNavigate();
+  const { user, isAdmin, loading: authLoading } = useAuthContext();
+
+  // Debug logging
+  useEffect(() => {
+    console.log("DEBUG:", {
+      user: user?.email,
+      isAdmin: isAdmin,
+      authLoading: authLoading,
+      loading: loading
+    });
+  }, [user, isAdmin, authLoading, loading]);
+
+  // Handle redirect after login
+  useEffect(() => {
+    if (user && !authLoading) {
+      console.log("User logged in:", user.email);
+      console.log("Is admin:", isAdmin);
+      
+      // Wait 2 seconds to ensure admin status is fully determined
+      const timer = setTimeout(() => {
+        if (isAdmin) {
+          console.log("Redirecting to admin dashboard");
+          navigate("/admin/dashboard", { replace: true });
+        } else {
+          console.log("Redirecting to home");
+          navigate("/", { replace: true });
+        }
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [user, isAdmin, authLoading, navigate]);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-    setError(""); // Clear error when user types
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError("");
   };
 
-const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const data = await authService.login(formData.email, formData.password);
-      console.log("User logged in:", data.user);
-      navigate("/");
-    } catch (error) {
-      setError(error.message || "Failed to log in. Please try again.");
-    } finally {
+      console.log("Attempting login with:", formData.email);
+
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (loginError) {
+        console.error("Login error:", loginError);
+        throw loginError;
+      }
+
+      console.log("Login successful, waiting for auth context to update...");
+      // Don't set loading to false here - let the useEffect handle redirect
+    } catch (err) {
+      console.error("Login failed:", err);
+      let errorMessage = "Failed to log in. Please try again.";
+
+      if (err.message === "Invalid login credentials") {
+        errorMessage = "Invalid email or password. Please check your credentials.";
+      } else if (err.message === "Email not confirmed") {
+        errorMessage = "Please confirm your email before logging in.";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
       setLoading(false);
     }
   };
-
-  const handleForgotPassword = async (e) => {
-    e.preventDefault();
-    setError("");
-    setResetMessage("");
-    setLoading(true);
-
-    try {
-      await authService.sendPasswordReset(
-        resetEmail,
-        `${window.location.origin}/reset-password`
-      );
-      
-      setResetMessage("Password reset link sent! Check your email.");
-      setTimeout(() => {
-        setShowForgotPassword(false);
-        setResetMessage("");
-        setResetEmail("");
-      }, 3000);
-    } catch (error) {
-      setError(error.message || "Failed to send reset email.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (showForgotPassword) {
-    return (
-      <div className="min-h-[calc(100vh-73px)] bg-[#F9F8F6] flex items-start justify-center px-4 sm:px-8 pt-6 sm:pt-8">
-        <div className="w-full max-w-2xl bg-[#EFEEEB] rounded-lg shadow-md px-4 sm:px-10 py-10">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 text-gray-900">
-            Reset Password
-          </h2>
-          <p className="text-center text-sm text-gray-600 mb-8">
-            Enter your email and we'll send you a reset link
-          </p>
-
-          <form onSubmit={handleForgotPassword} className="space-y-6">
-            <div className="space-y-1">
-              <label
-                htmlFor="resetEmail"
-                className="block text-sm font-medium text-gray-600"
-              >
-                Email
-              </label>
-              <input
-                type="email"
-                id="resetEmail"
-                name="resetEmail"
-                placeholder="Email"
-                value={resetEmail}
-                onChange={(e) => setResetEmail(e.target.value)}
-                className="flex h-10 w-full border border-gray-300 bg-white px-3 text-sm rounded-lg focus-visible:outline-none focus-visible:border-gray-500 transition"
-                required
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-
-            {resetMessage && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-                {resetMessage}
-              </div>
-            )}
-
-            <div className="flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowForgotPassword(false)}
-                className="px-8 py-2 bg-gray-300 text-gray-700 rounded-full hover:bg-gray-400 transition-colors text-sm font-medium"
-                disabled={loading}
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                className="px-8 py-2 bg-[#26231E] text-white rounded-full hover:bg-[#3d3832] transition-colors text-sm font-medium disabled:opacity-50"
-                disabled={loading}
-              >
-                {loading ? "Sending..." : "Send Reset Link"}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-[calc(100vh-73px)] bg-[#F9F8F6] flex items-start justify-center px-4 sm:px-8 pt-6 sm:pt-8">
@@ -155,26 +108,18 @@ const handleSubmit = async (e) => {
               onChange={handleChange}
               className="flex h-10 w-full border border-gray-300 bg-white px-3 text-sm rounded-lg focus-visible:outline-none focus-visible:border-gray-500 transition"
               required
+              disabled={loading || (user && !authLoading)}
             />
           </div>
 
           {/* Password */}
           <div className="space-y-1">
-            <div className="flex justify-between items-center">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-600"
-              >
-                Password
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowForgotPassword(true)}
-                className="text-xs text-gray-600 hover:text-gray-900 underline"
-              >
-                Forgot password?
-              </button>
-            </div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-600"
+            >
+              Password
+            </label>
             <input
               type="password"
               id="password"
@@ -184,28 +129,28 @@ const handleSubmit = async (e) => {
               onChange={handleChange}
               className="flex h-10 w-full border border-gray-300 bg-white px-3 text-sm rounded-lg focus-visible:outline-none focus-visible:border-gray-500 transition"
               required
+              disabled={loading || (user && !authLoading)}
             />
           </div>
 
+          {/* Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
 
-          {/* Submit */}
           <div className="flex justify-center">
             <button
               type="submit"
               className="px-8 py-2 bg-[#26231E] text-white rounded-full hover:bg-[#3d3832] transition-colors text-sm font-medium disabled:opacity-50"
-              disabled={loading}
+              disabled={loading || (user && !authLoading)}
             >
-              {loading ? "Logging in..." : "Log in"}
+              {loading ? "Logging in..." : user && !authLoading ? "Redirecting..." : "Log in"}
             </button>
           </div>
         </form>
 
-        {/* Sign up link */}
         <p className="flex justify-center gap-1 mt-6 text-sm text-gray-600 font-medium">
           Don't have an account?
           <Link
