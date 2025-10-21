@@ -1,4 +1,3 @@
-// App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import NavBar from './components/Navbar';
 import Footer from './components/Footer';
@@ -10,6 +9,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import ProfilePage from './pages/ProfilePage';
 import ViewPostPage from './pages/ViewPostPage';
 import NotFoundPage from './pages/NotFoundPage';
+import CreateAdminPage from './pages/CreateAdminPage';
 import AdminLayout from './components/AdminLayout';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -30,7 +30,7 @@ function PublicLayout({ children }) {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <Toaster />
         <Routes>
@@ -54,6 +54,12 @@ function App() {
 
           {/* Redirect admin login to regular login - admins use the same login page */}
           <Route path="/admin/login" element={<Navigate to="/login" replace />} />
+
+          {/* Admin creation route - accessible to first admin setup */}
+          <Route 
+            path="/create-admin" 
+            element={<PublicLayout><CreateAdminPage /></PublicLayout>} 
+          />
 
           {/* Protected admin routes WITHOUT NavBar and Footer */}
           <Route 
