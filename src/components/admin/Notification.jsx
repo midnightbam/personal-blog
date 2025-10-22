@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, Loader2 } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthContext } from '../../contexts/AuthContext';
 import { notificationService } from '../../services/notificationService';
+import { supabase } from '../../lib/supabase';
 
-export default function Notification({ setSidebarOpen }) {
-  const { user } = useAuth();
+export default function Notification({ sidebarOpen, setSidebarOpen }) {
+  const { user } = useAuthContext();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -103,7 +104,8 @@ export default function Notification({ setSidebarOpen }) {
       case 'new_article':
         return `New article published: ${notification.message}`;
       case 'like_on_your_article':
-        return `${notification.commenter_name} liked your article: ${notification.message}`;
+        // Message already contains the full "X liked your article: Title"
+        return notification.message;
       case 'comment_on_your_article':
         return `${notification.commenter_name} commented on your article`;
       case 'comment_on_article_you_commented':
@@ -184,44 +186,44 @@ export default function Notification({ setSidebarOpen }) {
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`p-4 md:p-6 flex items-start justify-between gap-4 border-b border-stone-200 last:border-b-0 transition-colors hover:bg-stone-50 ${
+                className={`py-4 flex items-start justify-between gap-3 border-b border-stone-200 last:border-b-0 transition-colors ${
                   !notification.is_read ? 'bg-orange-50' : ''
                 }`}
               >
                 <div className="flex items-start gap-3 md:gap-4 flex-1 min-w-0">
                   {/* Avatar */}
-                  <div className="w-12 h-12 rounded-full bg-stone-200 flex items-center justify-center flex-shrink-0">
-                    <span className="text-base font-medium text-stone-600">
+                  <div className="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-medium text-stone-600">
                       {getUserInitials(notification.commenter_name)}
                     </span>
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-base md:text-lg text-stone-800 break-words leading-relaxed">
+                    <p className="text-sm text-stone-800 break-words">
                       {getNotificationMessage(notification)}
                     </p>
                     
-                    <p className="mt-3 text-sm text-stone-500">
+                    <p className="mt-2 text-xs text-stone-500">
                       {formatTime(notification.created_at)}
                     </p>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {!notification.is_read && (
-                    <div className="w-3 h-3 rounded-full bg-orange-400 flex-shrink-0"></div>
+                    <div className="w-2 h-2 rounded-full bg-orange-400"></div>
                   )}
                   <button 
                     onClick={() => handleViewNotification(notification)}
-                    className="text-sm md:text-base font-medium text-stone-800 underline underline-offset-2 hover:text-stone-600 transition-colors whitespace-nowrap"
+                    className="text-xs md:text-sm font-medium text-stone-800 underline underline-offset-2 hover:text-stone-600 transition-colors whitespace-nowrap"
                   >
                     View
                   </button>
                   <button 
                     onClick={() => handleDeleteNotification(notification.id)}
-                    className="text-sm text-stone-500 hover:text-red-600 transition-colors"
+                    className="text-xs text-stone-500 hover:text-red-600 transition-colors"
                     title="Delete notification"
                   >
                     ✕

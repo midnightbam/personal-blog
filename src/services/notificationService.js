@@ -4,64 +4,36 @@ import { supabase } from '../lib/supabase';
 export const notificationService = {
   /**
    * Create notification when admin publishes a new article
-   * Admin receives: "You published a new article"
-   * Users receive: "Admin username published a new article: Title"
    */
-  async notifyNewArticle(articleId, articleTitle, authorId, authorName) {
+  async notifyNewArticle(articleId, articleTitle, authorId) {
     try {
       console.log('Creating notifications for new article:', articleTitle);
 
-      // Get all users
-      const { data: allUsers, error: usersError } = await supabase
+      // Get all users except the author
+      const { data: users, error: usersError } = await supabase
         .from('users')
-        .select('id, username, avatar_url')
-        .order('id');
+        .select('id')
+        .neq('id', authorId);
 
       if (usersError) {
         console.error('Error fetching users:', usersError);
         return;
       }
 
-      if (!allUsers || allUsers.length === 0) {
+      if (!users || users.length === 0) {
         console.log('No users to notify');
         return;
       }
 
-      // Separate admin from other users
-      const adminUser = allUsers.find(u => u.id === authorId);
-      const otherUsers = allUsers.filter(u => u.id !== authorId);
-
-      const notifications = [];
-
-      // Notification for admin (author)
-      if (adminUser) {
-        notifications.push({
-          user_id: authorId,
-          article_id: articleId,
-          type: 'new_article',
-          message: `You published a new article: ${articleTitle}`,
-          actor_id: authorId,
-          actor_name: authorName,
-          actor_avatar: adminUser.avatar_url,
-          is_read: false,
-          created_at: new Date().toISOString()
-        });
-      }
-
-      // Notifications for other users
-      otherUsers.forEach(user => {
-        notifications.push({
-          user_id: user.id,
-          article_id: articleId,
-          type: 'new_article',
-          message: `${authorName} published a new article: ${articleTitle}`,
-          actor_id: authorId,
-          actor_name: authorName,
-          actor_avatar: adminUser?.avatar_url || null,
-          is_read: false,
-          created_at: new Date().toISOString()
-        });
-      });
+      // Create notifications for all users
+      const notifications = users.map(user => ({
+        user_id: user.id,
+        article_id: articleId,
+        type: 'new_article',
+        message: `New article published: ${articleTitle}`,
+        is_read: false,
+        created_at: new Date().toISOString()
+      }));
 
       const { error: notifError } = await supabase
         .from('notifications')
@@ -85,37 +57,29 @@ export const notificationService = {
     try {
       console.log('Creating notification for new like by:', likerName);
 
-      // Get article author and liker info
-      const [articleResponse, likerResponse] = await Promise.all([
-        supabase
-          .from('articles')
-          .select('user_id, title')
-          .eq('id', articleId)
-          .single(),
-        supabase
-          .from('users')
-          .select('avatar_url')
-          .eq('id', likerId)
-          .maybeSingle()
-      ]);
+      // Get article author
+      const { data: article, error: articleError } = await supabase
+        .from('articles')
+        .select('user_id, title')
+        .eq('id', articleId)
+        .single();
 
-      if (articleResponse.error) {
-        console.error('Error fetching article:', articleResponse.error);
+      if (articleError) {
+        console.error('Error fetching article:', articleError);
         return;
       }
 
-      if (likerResponse.error) {
-        console.warn('Error fetching liker avatar:', likerResponse.error);
-      }
-
-      const article = articleResponse.data;
-      const likerAvatar = likerResponse.data?.avatar_url || null;
-
-      console.log('🖼️  Liker avatar URL:', likerAvatar);
-      console.log('📊 Liker data:', likerResponse.data);
-
       // Only notify if the liker is not the author
       if (article.user_id && article.user_id !== likerId) {
+        // Get liker's avatar URL
+        const { data: likerData } = await supabase
+          .from('users')
+          .select('avatar_url')
+          .eq('id', likerId)
+          .maybeSingle();
+
+        const likerAvatar = likerData?.avatar_url || null;
+
         const { error: insertError } = await supabase
           .from('notifications')
           .insert([{
@@ -123,9 +87,9 @@ export const notificationService = {
             article_id: articleId,
             type: 'like_on_your_article',
             message: `${likerName} liked your article: ${articleTitle}`,
-            actor_id: likerId,
-            actor_name: likerName,
-            actor_avatar: likerAvatar,
+            commenter_id: likerId,
+            commenter_name: likerName,
+            commenter_avatar: likerAvatar,
             is_read: false,
             created_at: new Date().toISOString()
           }]);
@@ -149,38 +113,31 @@ export const notificationService = {
     try {
       console.log('Creating notifications for new comment by:', commenterName);
 
-      // Get article author and commenter info
-      const [articleResponse, commenterResponse] = await Promise.all([
-        supabase
-          .from('articles')
-          .select('user_id, title')
-          .eq('id', articleId)
-          .single(),
-        supabase
-          .from('users')
-          .select('avatar_url')
-          .eq('id', commenterId)
-          .maybeSingle()
-      ]);
+      // Get article author
+      const { data: article, error: articleError } = await supabase
+        .from('articles')
+        .select('user_id, title')
+        .eq('id', articleId)
+        .single();
 
-      if (articleResponse.error) {
-        console.error('Error fetching article:', articleResponse.error);
+      if (articleError) {
+        console.error('Error fetching article:', articleError);
         return;
       }
 
-      if (commenterResponse.error) {
-        console.warn('Error fetching commenter avatar:', commenterResponse.error);
-      }
+      // Get commenter's avatar URL
+      const { data: commenterData } = await supabase
+        .from('users')
+        .select('avatar_url')
+        .eq('id', commenterId)
+        .maybeSingle();
 
-      const article = articleResponse.data;
-      const commenterAvatar = commenterResponse.data?.avatar_url || null;
+      const commenterAvatar = commenterData?.avatar_url || null;
+
       const notifications = [];
 
       // 1. Notify article author (if not the commenter)
       if (article.user_id && article.user_id !== commenterId) {
-        console.log('Notifying article author:', article.user_id);
-        console.log('Commenter avatar:', commenterAvatar);
-        
         notifications.push({
           user_id: article.user_id,
           article_id: articleId,
@@ -227,8 +184,6 @@ export const notificationService = {
 
       // Insert all notifications
       if (notifications.length > 0) {
-        console.log('About to insert notifications:', JSON.stringify(notifications, null, 2));
-        
         const { error: insertError } = await supabase
           .from('notifications')
           .insert(notifications);
@@ -238,8 +193,6 @@ export const notificationService = {
         } else {
           console.log(`Created ${notifications.length} notifications for new comment`);
         }
-      } else {
-        console.log('No notifications to create (commenter is the author or no other commenters)');
       }
     } catch (error) {
       console.error('Exception in notifyNewComment:', error);
@@ -247,50 +200,25 @@ export const notificationService = {
   },
 
   /**
-   * Get notifications for a user with full user data
+   * Get notifications for a user
    */
   async getUserNotifications(userId, limit = 50) {
     try {
-      console.log('📡 getUserNotifications called with userId:', userId, 'limit:', limit);
-      
       const { data, error } = await supabase
         .from('notifications')
-        .select(`
-          id,
-          user_id,
-          article_id,
-          type,
-          message,
-          actor_id,
-          actor_name,
-          actor_avatar,
-          commenter_id,
-          commenter_name,
-          commenter_avatar,
-          is_read,
-          created_at,
-          articles (
-            id,
-            title
-          )
-        `)
+        .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(limit);
 
       if (error) {
-        console.error('❌ Error fetching notifications:', error);
+        console.error('Error fetching notifications:', error);
         return [];
-      }
-
-      console.log(`✅ Got ${data?.length || 0} notifications for user ${userId}`);
-      if (data && data.length > 0) {
-        console.log('📋 First notification:', data[0]);
       }
 
       return data || [];
     } catch (error) {
-      console.error('❌ Exception in getUserNotifications:', error);
+      console.error('Exception in getUserNotifications:', error);
       return [];
     }
   },
