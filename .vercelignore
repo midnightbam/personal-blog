@@ -2,10 +2,8 @@ node_modules
 .git
 .gitignore
 README.md
-SETUP.md
 .env.local
 .env
 .DS_Store
-dist
-.next
 server
+api
