@@ -6,7 +6,7 @@
     "node": "20.x"
   },
   "scripts": {
-    "build": "npm --cwd=client install --legacy-peer-deps && npm --cwd=client run build && mkdir -p dist && cp -r client/dist/* dist/",
-    "dev": "npm --cwd=client run dev"
+    "build": "cd client && npm install --legacy-peer-deps && npm run build && cd .. && mkdir -p dist && cp -r client/dist/* dist/",
+    "dev": "cd client && npm run dev"
   }
 }
