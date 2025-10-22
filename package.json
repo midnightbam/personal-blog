@@ -2,6 +2,9 @@
   "name": "personal-blog",
   "private": true,
   "version": "1.0.0",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "build": "cd client && npm install --legacy-peer-deps && npm run build",
     "dev": "cd client && npm run dev"
