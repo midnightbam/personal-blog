@@ -68,10 +68,10 @@ export default function Profile() {
         return;
       }
 
-      // Fetch user profile from users table
+      // Fetch user profile from users table (including avatar_url)
       const { data: profile, error: profileError } = await supabase
         .from('users')
-        .select('name, username')
+        .select('name, username, avatar_url')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -79,34 +79,17 @@ export default function Profile() {
         console.error("Error fetching profile:", profileError);
       }
 
+      console.log('📥 Fetched profile:', profile);
+
       // Get first letter of email for placeholder
       const emailInitial = user.email ? user.email.charAt(0).toUpperCase() : "U";
       const placeholderAvatar = `https://ui-avatars.com/api/?name=${emailInitial}&background=12B279&color=fff&size=200`;
 
-      // Try to get avatar from avatars bucket
-      let avatarUrl = placeholderAvatar;
-      try {
-        const { data: avatarData } = await supabase
-          .storage
-          .from('avatars')
-          .list(user.id, {
-            limit: 1,
-            sortBy: { column: 'created_at', order: 'desc' }
-          });
+      // Use avatar_url from users table if it exists
+      let avatarUrl = profile?.avatar_url || placeholderAvatar;
 
-        if (avatarData && avatarData.length > 0) {
-          const { data } = supabase
-            .storage
-            .from('avatars')
-            .getPublicUrl(`${user.id}/${avatarData[0].name}`);
-          
-          if (data?.publicUrl) {
-            avatarUrl = data.publicUrl;
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching avatar:", error);
-      }
+      console.log('🖼️  Avatar URL from DB:', profile?.avatar_url);
+      console.log('📸 Using avatar:', avatarUrl);
 
       setFormData({
         name: profile?.name || "",
@@ -173,6 +156,8 @@ export default function Profile() {
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
+      console.log('📤 Uploading avatar:', { filePath, fileName, fileExt });
+
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, {
@@ -181,19 +166,36 @@ export default function Profile() {
         });
 
       if (uploadError) {
+        console.error('❌ Upload error:', uploadError);
         throw uploadError;
       }
+
+      console.log('✅ Upload successful');
 
       // Get public URL
       const { data } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
-      if (!data?.publicUrl) {
+      console.log('🔗 Avatar data:', data);
+
+      let avatarUrl = data?.publicUrl;
+      
+      // If no publicUrl, construct it manually
+      if (!avatarUrl) {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        avatarUrl = `${supabaseUrl}/storage/v1/object/public/avatars/${filePath}`;
+        console.log('🔧 Constructed avatar URL:', avatarUrl);
+      }
+
+      if (!avatarUrl) {
+        console.error('❌ Could not generate avatar URL');
         throw new Error("Failed to get public URL");
       }
 
-      setFormData({ ...formData, avatar: data.publicUrl });
+      console.log('🔗 Final Avatar URL:', avatarUrl);
+
+      setFormData({ ...formData, avatar: avatarUrl });
       toastSuccess("Avatar uploaded successfully");
     } catch (error) {
       console.error("Error uploading avatar:", error);
@@ -223,16 +225,25 @@ export default function Profile() {
       setLoading(true);
       if (!user) throw new Error("No user logged in");
 
-      // Update user profile
+      console.log('💾 Saving profile:', {
+        name: formData.name,
+        username: formData.username,
+        avatar_url: formData.avatar,
+        userId: user.id
+      });
+
+      // Update user profile with avatar URL
       const { error } = await supabase
         .from('users')
         .update({
           name: formData.name,
           username: formData.username,
+          avatar_url: formData.avatar,
         })
         .eq('id', user.id);
 
       if (error) {
+        console.error('❌ Save error:', error);
         // Check if it's a unique constraint error
         if (error.code === '23505') {
           setUsernameError("This username is already taken");
@@ -243,6 +254,7 @@ export default function Profile() {
         return;
       }
 
+      console.log('✅ Profile saved successfully');
       toastSuccess("Profile saved successfully", "Your profile has been successfully updated");
     } catch (error) {
       console.error("Error updating profile:", error);
