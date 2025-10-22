@@ -1,7 +1,5 @@
 {
-  "buildCommand": "npm install --cwd client --legacy-peer-deps && npm run build --cwd client",
   "outputDirectory": "client/dist",
-  "installCommand": "echo 'Installation handled by buildCommand'",
   "rewrites": [
     {
       "source": "/api/(.*)",

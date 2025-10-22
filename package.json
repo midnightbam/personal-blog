@@ -1,0 +1,9 @@
+﻿{
+  "name": "personal-blog",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd client && npm install --legacy-peer-deps && npm run build",
+    "dev": "cd client && npm run dev"
+  }
+}
