@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm --cwd client install --legacy-peer-deps && npm --cwd client run build && mkdir -p dist && cp -r client/dist/* dist/",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true
 }

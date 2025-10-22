@@ -6,6 +6,8 @@
     "node": "20.x"
   },
   "scripts": {
-    "dev": "cd client && npm run dev"
+    "build": "npm --prefix client install --legacy-peer-deps && npm --prefix client run build && npm run build:copy",
+    "build:copy": "node -e \"const fs = require('fs'); const path = require('path'); const src = 'client/dist'; const dst = 'dist'; if(fs.existsSync(dst)) fs.rmSync(dst, {recursive: true, force: true}); function copyDir(s,d) { fs.mkdirSync(d, {recursive:true}); fs.readdirSync(s).forEach(f => { const sp = path.join(s,f); const dp = path.join(d,f); fs.statSync(sp).isDirectory() ? copyDir(sp, dp) : fs.copyFileSync(sp, dp); }); } copyDir(src, dst);\"",
+    "dev": "npm --prefix client run dev"
   }
 }
