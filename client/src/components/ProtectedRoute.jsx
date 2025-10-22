@@ -1,10 +1,10 @@
 import { Navigate } from 'react-router-dom';
-import { useAuthContext } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 export function ProtectedRoute({ children, requireAdmin = false }) {
-  const { user, loading: authLoading } = useAuthContext();
+  const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
   const [error, setError] = useState(null);

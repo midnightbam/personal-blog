@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuthContext } from "../contexts/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import {
   Facebook,
   Linkedin,
@@ -45,7 +45,7 @@ const toastError = (message) => {
 export default function ViewPost() {
   const { id: postId } = useParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuthContext();
+  const { user, loading: authLoading } = useAuth();
 
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
@@ -179,7 +179,7 @@ export default function ViewPost() {
         toastSuccess("Post liked!");
 
         // Get user data for notification
-        const { data: userData, error: userError } = await supabase
+        const { data: userData } = await supabase
           .from('users')
           .select('name')
           .eq('id', user.id)
@@ -218,15 +218,6 @@ export default function ViewPost() {
 
     try {
       setIsSubmittingComment(true);
-
-      // Get user data for notification
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('name')
-        .eq('id', user.id)
-        .single();
-
-      const commenterName = userData?.name || user.email;
 
       if (editingCommentId) {
         // Update existing comment
@@ -274,6 +265,20 @@ export default function ViewPost() {
         // Add to local state
         setComments((prev) => [newComment, ...prev]);
         toastSuccess("Comment posted!");
+
+        // Get user data for notification
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('name')
+          .eq('id', user.id)
+          .single();
+
+        if (userError) {
+          console.error('Error fetching user data:', userError);
+          throw userError;
+        }
+
+        const commenterName = userData?.name || user.email;
 
         // Create notifications
         await notificationService.notifyNewComment(

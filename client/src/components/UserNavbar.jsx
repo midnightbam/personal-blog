@@ -8,13 +8,13 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
-import { useAuthContext } from "../contexts/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import UserDisplay from "./UserDisplay";
-import NotificationsPanel from "./NotificationsPanel"; // ✅ new import
+import NotificationsPanel from "./NotificationsPanel";
 
 const UserNavbar = () => {
   const navigate = useNavigate();
-  const { user } = useAuthContext();
+  const { user } = useAuth();
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);

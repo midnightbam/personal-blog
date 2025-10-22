@@ -57,20 +57,34 @@ export const notificationService = {
     try {
       console.log('Creating notification for new like by:', likerName);
 
-      // Get article author
-      const { data: article, error: articleError } = await supabase
-        .from('articles')
-        .select('user_id, title')
-        .eq('id', articleId)
-        .single();
+      // Get article author and existing notification
+      const [articleResponse, existingNotifResponse] = await Promise.all([
+        supabase
+          .from('articles')
+          .select('user_id, title')
+          .eq('id', articleId)
+          .single(),
+        supabase
+          .from('notifications')
+          .select('id')
+          .eq('article_id', articleId)
+          .eq('user_id', likerId)
+          .eq('type', 'like_on_your_article')
+          .maybeSingle()
+      ]);
 
-      if (articleError) {
-        console.error('Error fetching article:', articleError);
+      if (articleResponse.error) {
+        console.error('Error fetching article:', articleResponse.error);
         return;
       }
 
-      // Only notify if the liker is not the author
-      if (article.user_id && article.user_id !== likerId) {
+      const article = articleResponse.data;
+
+      // Only notify if the liker is not the author and notification doesn't exist
+      if (article.user_id && 
+          article.user_id !== likerId && 
+          !existingNotifResponse.data) {
+        
         const { error: insertError } = await supabase
           .from('notifications')
           .insert([{
@@ -78,8 +92,8 @@ export const notificationService = {
             article_id: articleId,
             type: 'like_on_your_article',
             message: `${likerName} liked your article: ${articleTitle}`,
-            commenter_id: likerId,
-            commenter_name: likerName,
+            actor_id: likerId,
+            actor_name: likerName,
             is_read: false,
             created_at: new Date().toISOString()
           }]);

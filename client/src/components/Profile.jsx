@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { User, Lock, ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useAuthContext } from "@/contexts/AuthContext";
-import { imageUploadService } from "@/services/imageUploadService";
+import { useAuth } from "@/hooks/useAuth";
 import { toast as sonnerToast } from "sonner";
 
 // Custom toast function
@@ -35,7 +34,7 @@ const toastError = (message) => {
 export default function Profile() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading: authLoading } = useAuthContext();
+  const { user, loading: authLoading } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     username: "",
@@ -43,7 +42,6 @@ export default function Profile() {
     avatar: "",
   });
 
-  const [showAlert, setShowAlert] = useState(false);
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || "profile");
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -62,16 +60,7 @@ export default function Profile() {
     window.scrollTo(0, 0);
   }, []);
 
-  // Fetch user data on component mount
-  useEffect(() => {
-    if (!authLoading && user) {
-      fetchUserProfile();
-    } else if (!authLoading && !user) {
-      navigate("/login");
-    }
-  }, [user, authLoading]);
-
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     try {
       setDataLoading(true);
       
@@ -141,7 +130,16 @@ export default function Profile() {
     } finally {
       setDataLoading(false);
     }
-  };
+  }, [user]);
+
+  // Fetch user data on component mount
+  useEffect(() => {
+    if (!authLoading && user) {
+      fetchUserProfile();
+    } else if (!authLoading && !user) {
+      navigate("/login");
+    }
+  }, [user, authLoading, fetchUserProfile, navigate]);
 
   const validateUsername = (username) => {
     if (!username) return "Username is required";

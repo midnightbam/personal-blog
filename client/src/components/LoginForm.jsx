@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { useAuthContext } from "../contexts/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
 const LoginForm = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user, isAdmin, loading: authLoading } = useAuthContext();
+  const { user, isAdmin, loading: authLoading } = useAuth();
 
   // Debug logging
   useEffect(() => {
@@ -152,7 +152,7 @@ const LoginForm = () => {
         </form>
 
         <p className="flex justify-center gap-1 mt-6 text-sm text-gray-600 font-medium">
-          Don't have an account?
+          Don&apos;t have an account?
           <Link
             to="/signup"
             className="text-gray-900 hover:text-gray-700 underline font-semibold transition"

@@ -1,9 +1,9 @@
 // src/components/admin/Profile.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Menu } from 'lucide-react';
 import { toast as sonnerToast } from "sonner";
 import { supabase } from '@/lib/supabase';
-import { useAuthContext } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 const toastSuccess = (message, description = "") => {
   sonnerToast.success(message, {
@@ -30,8 +30,8 @@ const toastError = (message) => {
   });
 };
 
-export default function Profile({ onBack, sidebarOpen, setSidebarOpen }) {
-  const { user } = useAuthContext();
+export default function Profile({ setSidebarOpen }) {
+  const { user } = useAuth();
   const [profileData, setProfileData] = useState({
     name: '',
     username: '',
@@ -46,7 +46,7 @@ export default function Profile({ onBack, sidebarOpen, setSidebarOpen }) {
   const [originalUsername, setOriginalUsername] = useState('');
 
   // Fetch user data
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -95,7 +95,7 @@ export default function Profile({ onBack, sidebarOpen, setSidebarOpen }) {
     } catch (err) {
       console.error('Error:', err);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchUserData();
@@ -124,7 +124,7 @@ export default function Profile({ onBack, sidebarOpen, setSidebarOpen }) {
         supabase.removeChannel(channel);
       };
     }
-  }, [user]);
+  }, [user, fetchUserData]);
 
   // Username validation
   const validateUsername = (username) => {

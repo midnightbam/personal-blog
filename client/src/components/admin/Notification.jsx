@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, Loader2 } from 'lucide-react';
-import { useAuthContext } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { notificationService } from '../../services/notificationService';
-import { supabase } from '../../lib/supabase';
 
-export default function Notification({ sidebarOpen, setSidebarOpen }) {
-  const { user } = useAuthContext();
+export default function Notification({ setSidebarOpen }) {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

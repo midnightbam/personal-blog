@@ -1,5 +1,4 @@
-/* eslint-disable react/prop-types */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,37 +15,43 @@ export default function Articles() {
   const [allCategories, setAllCategories] = useState([]);
   const [category, setCategory] = useState("Highlight");
   const [allPosts, setAllPosts] = useState([]);
-  const [filteredPosts, setFilteredPosts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch categories and articles
+  // Constants for pagination
+  const ITEMS_PER_PAGE = 6;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+  // Fetch categories and initial articles
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
 
-        // Fetch categories
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from('categories')
-          .select('name')
-          .order('name', { ascending: true });
+        // Fetch both categories and initial articles in parallel
+        const [categoriesResponse, articlesResponse] = await Promise.all([
+          supabase
+            .from('categories')
+            .select('name')
+            .order('name', { ascending: true }),
+          supabase
+            .from('articles')
+            .select('*', { count: 'exact' })
+            .eq('status', 'Published')
+            .order('date', { ascending: false })
+            .range(0, ITEMS_PER_PAGE - 1)
+        ]);
 
-        if (categoriesError) throw categoriesError;
+        if (categoriesResponse.error) throw categoriesResponse.error;
+        if (articlesResponse.error) throw articlesResponse.error;
 
-        const categoryNames = categoriesData?.map(cat => cat.name) || [];
+        const categoryNames = categoriesResponse.data?.map(cat => cat.name) || [];
         setAllCategories(["Highlight", ...categoryNames]);
 
-        // Fetch published articles
-        const { data: articlesData, error: articlesError } = await supabase
-          .from('articles')
-          .select('*')
-          .eq('status', 'Published')
-          .order('date', { ascending: false });
-
-        if (articlesError) throw articlesError;
-
-        setAllPosts(articlesData || []);
+        setAllPosts(articlesResponse.data || []);
+        setHasMore(articlesResponse.data.length === ITEMS_PER_PAGE);
       } catch (error) {
         console.error('Error fetching data:', error);
         setAllPosts([]);
@@ -58,32 +63,69 @@ export default function Articles() {
     fetchData();
   }, []);
 
-  // Filter posts based on category and search
-  useEffect(() => {
-    let filtered = [...allPosts];
-
-    // Filter by category
-    if (category !== "Highlight") {
-      filtered = filtered.filter((post) => post.category === category);
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(
-        (post) =>
-          post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          post.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    setFilteredPosts(filtered);
-  }, [category, searchQuery, allPosts]);
-
   const handleCategoryChange = (value) => {
     if (value !== category) {
       setCategory(value);
     }
   };
+
+  const loadMorePosts = useCallback(async () => {
+    if (isFetchingMore || !hasMore) return;
+
+    try {
+      setIsFetchingMore(true);
+      const from = currentPage * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+
+      const query = supabase
+        .from('articles')
+        .select('*')
+        .eq('status', 'Published')
+        .order('date', { ascending: false })
+        .range(from, to);
+
+      if (category !== "Highlight") {
+        query.eq('category', category);
+      }
+
+      if (searchQuery.trim()) {
+        query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      if (data) {
+        setAllPosts(prev => [...prev, ...data]);
+        setHasMore(data.length === ITEMS_PER_PAGE);
+        setCurrentPage(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error loading more posts:', error);
+    } finally {
+      setIsFetchingMore(false);
+    }
+  }, [category, searchQuery, currentPage, hasMore, isFetchingMore]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isFetchingMore && hasMore) {
+          loadMorePosts();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const loadMoreTrigger = document.getElementById('load-more-trigger');
+    if (loadMoreTrigger) {
+      observer.observe(loadMoreTrigger);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMore, isFetchingMore, loadMorePosts]);
 
   if (isLoading) {
     return (
@@ -98,7 +140,7 @@ export default function Articles() {
 
   return (
     <section className="bg-gray-50 py-8 lg:py-10">
-      <div className="px-4 sm:px-6 md:px-8 lg:px-12 max-w-[1200px] mx-auto w-full">
+      <div className="mx-auto px-4 max-w-7xl">
         {/* Title */}
         <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 lg:mb-6">
           Latest articles
@@ -172,9 +214,9 @@ export default function Articles() {
         </div>
 
         {/* Blog Cards Grid */}
-        {filteredPosts.length > 0 ? (
+        {allPosts.length > 0 ? (
           <article className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
-            {filteredPosts.map((blog) => (
+            {allPosts.map((blog) => (
               <BlogCard
                 key={blog.id}
                 id={blog.id}
@@ -190,6 +232,20 @@ export default function Articles() {
                 })}
               />
             ))}
+            
+            {/* Infinite Scroll Trigger */}
+            {hasMore && (
+              <div
+                id="load-more-trigger"
+                className="col-span-full flex justify-center p-4"
+              >
+                {isFetchingMore ? (
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                ) : (
+                  <div className="h-10" aria-hidden="true" />
+                )}
+              </div>
+            )}
           </article>
         ) : (
           <div className="text-center py-12">

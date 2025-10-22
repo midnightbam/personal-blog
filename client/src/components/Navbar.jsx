@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthContext } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import UserNavbar from './UserNavbar';
 
 const NavBar = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuthContext();
+  const { user, loading } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Show loading state while checking auth
