@@ -26,7 +26,7 @@ const LoginForm = () => {
       console.log("User logged in:", user.email);
       console.log("Is admin:", isAdmin);
       
-      // Wait 2 seconds to ensure admin status is fully determined
+      // Quick redirect (300ms delay for UI stability)
       const timer = setTimeout(() => {
         if (isAdmin) {
           console.log("Redirecting to admin dashboard");
@@ -35,7 +35,7 @@ const LoginForm = () => {
           console.log("Redirecting to home");
           navigate("/", { replace: true });
         }
-      }, 2000);
+      }, 300);
 
       return () => clearTimeout(timer);
     }
@@ -131,6 +131,14 @@ const LoginForm = () => {
               required
               disabled={loading || (user && !authLoading)}
             />
+            <div className="flex justify-end pt-1">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-gray-600 hover:text-gray-900 underline transition"
+              >
+                Forget password?
+              </Link>
+            </div>
           </div>
 
           {/* Error Message */}
@@ -151,15 +159,17 @@ const LoginForm = () => {
           </div>
         </form>
 
-        <p className="flex justify-center gap-1 mt-6 text-sm text-gray-600 font-medium">
-          Don&apos;t have an account?
-          <Link
-            to="/signup"
-            className="text-gray-900 hover:text-gray-700 underline font-semibold transition"
-          >
-            Sign up
-          </Link>
-        </p>
+        <div className="flex flex-col gap-4 mt-6">
+          <p className="flex justify-center gap-1 text-sm text-gray-600 font-medium">
+            Don&apos;t have an account?
+            <Link
+              to="/signup"
+              className="text-gray-900 hover:text-gray-700 underline font-semibold transition"
+            >
+              Sign up
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import React from 'react';
+import heroImage from '../assets/super-lua-azul-1024x680.jpg';
 
 const HeroSection = () => {
   return (
@@ -7,12 +8,14 @@ const HeroSection = () => {
         <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 md:gap-10 lg:gap-6 xl:gap-10 items-center justify-center">
           {/* Left Content */}
           <div className="flex-shrink-0 text-center lg:text-right lg:pr-4 xl:pr-6 w-full lg:w-auto lg:max-w-[280px] xl:max-w-[350px]">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-4xl xl:text-5xl font-bold text-gray-900 leading-tight mb-3 sm:mb-4 lg:mb-4 xl:mb-5">
-              <span className="lg:inline">Stay<br className="lg:inline hidden" /> Informed,</span><br />
-              <span className="lg:inline">Stay Inspired</span>
+            <h1 className="text-3xl sm:text-4xl md:text-4xl font-bold text-gray-800 text-center leading-tight">
+              <span className="lg:inline">
+                Feed Your Mind. <br className="lg:inline hidden" />Inspire Your Heart.
+              </span>
             </h1>
-            <p className="text-base sm:text-lg md:text-xl lg:text-sm xl:text-base text-gray-600 leading-relaxed px-4 sm:px-0">
-              Discover a World of Knowledge at Your Fingertips. Your Daily Dose of Inspiration and Information.
+
+            <p className="text-base sm:text-lg md:text-xl lg:text-sm xl:text-base text-gray-600 leading-relaxed px-4 sm:px-0 text-center mt-4">
+              Every moment you stay curious, you grow stronger, wiser, and closer to your dreams.
             </p>
           </div>
           
@@ -20,8 +23,8 @@ const HeroSection = () => {
           <div className="flex-shrink-0 w-full sm:w-auto">
             <div className="relative mx-auto max-w-xs sm:max-w-sm md:max-w-md lg:max-w-none">
               <img
-                src="https://res.cloudinary.com/dcbpjtd1r/image/upload/v1728449784/my-blog-post/xgfy0xnvyemkklcqodkg.jpg"
-                alt="Thompson P. with cat"
+                src={heroImage}
+                alt="Hero image"
                 className="rounded-3xl shadow-2xl w-full sm:w-[320px] md:w-[360px] lg:w-[320px] xl:w-[380px] h-[400px] sm:h-[450px] md:h-[500px] lg:h-[450px] xl:h-[500px] object-cover mx-auto"
               />
             </div>
@@ -30,13 +33,11 @@ const HeroSection = () => {
           {/* Right Content - Author Info */}
           <div className="flex-shrink-0 w-full lg:w-auto lg:max-w-[280px] xl:max-w-[350px] lg:pl-4 xl:pl-6 px-4 sm:px-6 lg:px-0">
             <p className="text-sm sm:text-base lg:text-xs xl:text-sm text-gray-500 mb-1.5 lg:mb-2">—Author</p>
-            <h2 className="text-2xl sm:text-3xl lg:text-xl xl:text-2xl font-bold text-gray-900 mb-2.5 sm:mb-3 lg:mb-3">Thompson P.</h2>
+            <h2 className="text-2xl sm:text-3xl lg:text-xl xl:text-2xl font-bold text-gray-900 mb-2.5 sm:mb-3 lg:mb-3">Punyanuch K.</h2>
             <p className="text-base sm:text-lg md:text-xl lg:text-sm xl:text-base text-gray-600 leading-relaxed mb-2.5 sm:mb-3 lg:mb-3">
-              I am a pet enthusiast and freelance writer who specializes in animal behavior and care. With a deep love for cats, I enjoy sharing insights on feline companionship and wellness.
-            </p>
+I am a curious and dedicated learner with a love for exploring new ideas and skills. Always eager to understand the world around me, I enjoy diving into topics that spark my creativity and curiosity.            </p>
             <p className="text-base sm:text-lg md:text-xl lg:text-sm xl:text-base text-gray-600 leading-relaxed">
-              When I'm not writing, I spend time volunteering at my local animal shelter, helping cats find loving homes.
-            </p>
+When I’m not learning or experimenting, I enjoy spending time on personal projects, exploring ways to grow, and connecting with others who share my interests.            </p>
           </div>
         </div>
       </div>
