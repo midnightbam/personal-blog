@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Folder, User, Bell, Lock, LogOut, X, Link as LinkIcon } from 'lucide-react';
+import { FileText, Folder, User, Bell, Lock, LogOut, Menu, X, Link as LinkIcon } from 'lucide-react';
 import ArticleManagementSupabase from "./admin/ArticleManagementSupabase";
 import ArticleForm from "./admin/ArticleForm";
 import CategoryManagement from "./admin/CategoryManagement";
@@ -7,6 +7,7 @@ import CategoryForm from "./admin/CategoryForm";
 import Profile from "./admin/Profile";
 import ResetPassword from "./admin/ResetPassword";
 import Notification from "./admin/Notification";
+import DeleteModal from "./admin/DeleteModal";
 
 export default function AdminLayout() {
   const [activeSection, setActiveSection] = useState('Article management');
@@ -188,7 +189,7 @@ export default function AdminLayout() {
 
         {/* Header */}
         <div className="px-5 py-8">
-          <h1 className="text-2xl font-semibold text-stone-800 mb-1">Bamboo<span className="text-[#12B279]">.</span> Admin Panel</h1>
+          <h1 className="text-2xl font-semibold text-stone-800 mb-1">hh.</h1>
           <p className="text-sm text-orange-400">Admin panel</p>
         </div>
 
@@ -217,7 +218,7 @@ export default function AdminLayout() {
             className="w-full flex items-center gap-3 px-5 py-3 text-sm text-stone-600 hover:bg-stone-400 hover:text-stone-800 transition-all duration-200"
           >
             <LinkIcon className="w-4 h-4" strokeWidth={1.5} />
-            <span>hh. website</span>
+            <span>Bamboo. website</span>
           </button>
           <button 
             onClick={handleLogout}

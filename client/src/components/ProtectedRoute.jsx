@@ -8,15 +8,38 @@ export function ProtectedRoute({ children, requireAdmin = false }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [debugInfo, setDebugInfo] = useState('');
+  const [sessionValid, setSessionValid] = useState(true);
 
   useEffect(() => {
     console.log('🔵 ProtectedRoute mounted');
     console.log('🔵 Auth loading:', authLoading);
     console.log('🔵 User:', user);
     console.log('🔵 Require admin:', requireAdmin);
-    
-    setDebugInfo(`Auth loading: ${authLoading}, User: ${user?.email || 'none'}`);
+
+    // Validate session before proceeding
+    const validateSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) {
+          console.warn('⚠️ Session invalid, attempting recovery...');
+          
+          // Try to recover with refresh token
+          const { data: { session: recoveredSession }, error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError || !recoveredSession) {
+            console.error('❌ Session recovery failed');
+            setSessionValid(false);
+            return false;
+          }
+          console.log('✅ Session recovered');
+        }
+        setSessionValid(true);
+        return true;
+      } catch (err) {
+        console.error('❌ Session validation error:', err);
+        setSessionValid(false);
+        return false;
+      }
+    };
 
     const checkRole = async () => {
       console.log('🔵 Starting role check...');
@@ -29,7 +52,6 @@ export function ProtectedRoute({ children, requireAdmin = false }) {
 
       try {
         console.log('🔵 Checking role for user:', user.id);
-        setDebugInfo(`Checking role for: ${user.email}`);
         
         const timeoutId = setTimeout(() => {
           console.warn('🟡 Role check timeout');
@@ -49,20 +71,16 @@ export function ProtectedRoute({ children, requireAdmin = false }) {
           console.warn('🟡 Error fetching role:', roleError);
           console.log('🟡 Error code:', roleError.code);
           console.log('🟡 Error message:', roleError.message);
-          setDebugInfo(`Role error: ${roleError.message}`);
           setIsAdmin(false);
         } else if (data?.role === 'admin') {
           console.log('✅ User IS admin');
-          setDebugInfo('User is admin ✅');
           setIsAdmin(true);
         } else {
           console.log('ℹ️ User role:', data?.role || 'not set');
-          setDebugInfo(`User role: ${data?.role || 'not set'}`);
           setIsAdmin(false);
         }
       } catch (err) {
         console.error('❌ Error checking role:', err);
-        setDebugInfo(`Error: ${err.message}`);
         setError(err.message);
         setIsAdmin(false);
       } finally {
@@ -71,11 +89,34 @@ export function ProtectedRoute({ children, requireAdmin = false }) {
     };
 
     if (!authLoading) {
-      checkRole();
+      validateSession().then(isValid => {
+        if (isValid) {
+          checkRole();
+        } else {
+          setRoleLoading(false);
+        }
+      });
     }
   }, [user, authLoading, requireAdmin]);
 
-  console.log('🔵 Render state - authLoading:', authLoading, 'roleLoading:', roleLoading, 'isAdmin:', isAdmin);
+  console.log('🔵 Render state - authLoading:', authLoading, 'roleLoading:', roleLoading, 'isAdmin:', isAdmin, 'sessionValid:', sessionValid);
+
+  // Session not valid - try to recover
+  if (!sessionValid) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-600 font-medium mb-4">Session expired. Please log in again.</p>
+          <button
+            onClick={() => window.location.href = '/login'}
+            className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Show loading screen
   if (authLoading || roleLoading) {
@@ -84,7 +125,6 @@ export function ProtectedRoute({ children, requireAdmin = false }) {
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600 font-medium">Loading...</p>
-          <p className="text-gray-500 text-sm mt-4">{debugInfo}</p>
         </div>
       </div>
     );

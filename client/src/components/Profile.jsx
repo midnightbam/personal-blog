@@ -68,12 +68,19 @@ export default function Profile() {
         return;
       }
 
-      // Fetch user profile from users table (including avatar_url)
+      console.log('🔄 Fetching profile for user:', user.id);
+
+      // Fetch user profile from users table (including avatar_url) with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
       const { data: profile, error: profileError } = await supabase
         .from('users')
-        .select('name, username, avatar_url')
+        .select('name, username, avatar_url', { count: 'exact' })
         .eq('id', user.id)
         .maybeSingle();
+
+      clearTimeout(timeoutId);
 
       if (profileError && profileError.code !== 'PGRST116') {
         console.error("Error fetching profile:", profileError);
@@ -123,6 +130,21 @@ export default function Profile() {
       navigate("/login");
     }
   }, [user, authLoading, fetchUserProfile, navigate]);
+
+  // Listen for visibility changes (tab switch)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user && !authLoading) {
+        console.log('👁️ Page became visible, refreshing profile data...');
+        fetchUserProfile();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user, authLoading, fetchUserProfile]);
 
   const validateUsername = (username) => {
     if (!username) return "Username is required";
@@ -426,9 +448,10 @@ export default function Profile() {
               <hr className="border-gray-300" />
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Name</label>
+                <label htmlFor="profile-name" className="block text-sm font-medium text-gray-700">Name</label>
                 <input
                   type="text"
+                  id="profile-name"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
@@ -438,9 +461,10 @@ export default function Profile() {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Username</label>
+                <label htmlFor="profile-username" className="block text-sm font-medium text-gray-700">Username</label>
                 <input
                   type="text"
+                  id="profile-username"
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
@@ -458,9 +482,10 @@ export default function Profile() {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <label htmlFor="profile-email" className="block text-sm font-medium text-gray-700">Email</label>
                 <input
                   type="text"
+                  id="profile-email"
                   name="email"
                   value={formData.email}
                   disabled
@@ -481,11 +506,12 @@ export default function Profile() {
           {activeTab === "reset" && (
             <form onSubmit={handlePasswordSubmit} className="space-y-5">
               <div>
-                <label className="block text-base font-medium text-gray-700 mb-3">
+                <label htmlFor="mobile-current-password" className="block text-base font-medium text-gray-700 mb-3">
                   Current password
                 </label>
                 <input
                   type="password"
+                  id="mobile-current-password"
                   name="currentPassword"
                   value={passwordForm.currentPassword}
                   onChange={handlePasswordChange}
@@ -495,11 +521,12 @@ export default function Profile() {
               </div>
 
               <div>
-                <label className="block text-base font-medium text-gray-700 mb-3">
+                <label htmlFor="mobile-new-password" className="block text-base font-medium text-gray-700 mb-3">
                   New password
                 </label>
                 <input
                   type="password"
+                  id="mobile-new-password"
                   name="newPassword"
                   value={passwordForm.newPassword}
                   onChange={handlePasswordChange}
@@ -512,11 +539,12 @@ export default function Profile() {
               </div>
 
               <div>
-                <label className="block text-base font-medium text-gray-700 mb-3">
+                <label htmlFor="mobile-confirm-password" className="block text-base font-medium text-gray-700 mb-3">
                   Confirm new password
                 </label>
                 <input
                   type="password"
+                  id="mobile-confirm-password"
                   name="confirmPassword"
                   value={passwordForm.confirmPassword}
                   onChange={handlePasswordChange}
@@ -633,11 +661,12 @@ export default function Profile() {
                   <hr className="border-gray-300" />
 
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="desktop-name" className="block text-sm font-medium text-gray-700">
                       Name
                     </label>
                     <input
                       type="text"
+                      id="desktop-name"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
@@ -647,11 +676,12 @@ export default function Profile() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="desktop-username" className="block text-sm font-medium text-gray-700">
                       Username
                     </label>
                     <input
                       type="text"
+                      id="desktop-username"
                       name="username"
                       value={formData.username}
                       onChange={handleChange}
@@ -669,11 +699,12 @@ export default function Profile() {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="desktop-email" className="block text-sm font-medium text-gray-700">
                       Email
                     </label>
                     <input
                       type="text"
+                      id="desktop-email"
                       name="email"
                       value={formData.email}
                       disabled
@@ -695,11 +726,12 @@ export default function Profile() {
               {activeTab === "reset" && (
                 <form onSubmit={handlePasswordSubmit} className="space-y-5 max-w-md">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="desktop-current-password" className="block text-sm font-medium text-gray-700 mb-2">
                       Current password
                     </label>
                     <input
                       type="password"
+                      id="desktop-current-password"
                       name="currentPassword"
                       value={passwordForm.currentPassword}
                       onChange={handlePasswordChange}
@@ -709,11 +741,12 @@ export default function Profile() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="desktop-new-password" className="block text-sm font-medium text-gray-700 mb-2">
                       New password
                     </label>
                     <input
                       type="password"
+                      id="desktop-new-password"
                       name="newPassword"
                       value={passwordForm.newPassword}
                       onChange={handlePasswordChange}
@@ -726,11 +759,12 @@ export default function Profile() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="desktop-confirm-password" className="block text-sm font-medium text-gray-700 mb-2">
                       Confirm new password
                     </label>
                     <input
                       type="password"
+                      id="desktop-confirm-password"
                       name="confirmPassword"
                       value={passwordForm.confirmPassword}
                       onChange={handlePasswordChange}
