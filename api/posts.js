@@ -1,16 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase environment variables');
-  console.error('SUPABASE_URL:', !!supabaseUrl);
-  console.error('SUPABASE_ANON_KEY:', !!supabaseKey);
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -27,6 +16,28 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Get environment variables
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+    // Check if variables exist
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing environment variables:', {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseKey,
+      });
+      return res.status(500).json({
+        success: false,
+        error: 'Server configuration error: Missing Supabase credentials',
+        debug: process.env.NODE_ENV === 'development' ? {
+          hasUrl: !!supabaseUrl,
+          hasKey: !!supabaseKey,
+        } : undefined,
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     // Get all posts with pagination
     const page = req.query.page ? parseInt(req.query.page) : 1;
     const limit = req.query.limit ? parseInt(req.query.limit) : 10;
@@ -55,6 +66,7 @@ export default async function handler(req, res) {
       limit,
     });
   } catch (error) {
+    console.error('Error fetching posts:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to fetch posts',
