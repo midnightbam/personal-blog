@@ -58,5 +58,5 @@
 
 ## 🌍 Live Demo
 
-👉 [View the live site here](https://personal-blog-nine-beryl.vercel.app/)
+👉 [View the live site here](https://personal-blog-client-lilac.vercel.app/)
 
