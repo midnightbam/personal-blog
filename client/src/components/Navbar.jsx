@@ -18,7 +18,7 @@ const NavBar = () => {
               onClick={() => navigate('/')}
               className="text-lg sm:text-xl font-bold text-gray-900 hover:opacity-80 transition-opacity"
             >
-              hh<span className="text-[#12B279]">.</span>
+              Bamboo<span className="text-[#12B279]">.</span>
             </button>
             
             {/* Loading indicator */}

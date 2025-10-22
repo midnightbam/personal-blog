@@ -6,6 +6,7 @@ import LoginForm from './components/LoginForm';
 import SignUpPage from './pages/SignupPage';
 import RegistrationSuccessPage from './pages/RegistrationSuccessPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ProfilePage from './pages/ProfilePage';
 import ViewPostPage from './pages/ViewPostPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -38,6 +39,7 @@ function App() {
           {/* Public routes with NavBar and Footer */}
           <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
           <Route path="/login" element={<PublicLayout><LoginForm /></PublicLayout>} />
+          <Route path="/forgot-password" element={<PublicLayout><ForgotPasswordPage /></PublicLayout>} />
           <Route path="/signup" element={<PublicLayout><SignUpPage /></PublicLayout>} />
           <Route path="/registration-success" element={<PublicLayout><RegistrationSuccessPage /></PublicLayout>} />
           <Route path="/reset-password" element={<PublicLayout><ResetPasswordPage /></PublicLayout>} />

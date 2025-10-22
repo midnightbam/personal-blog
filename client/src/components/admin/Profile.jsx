@@ -278,7 +278,16 @@ export default function Profile({ setSidebarOpen }) {
   };
 
   return (
-    <div className="flex-1 bg-white min-h-screen">
+    <div 
+      className="flex-1 bg-white min-h-screen"
+      onKeyDown={(e) => {
+        // Ctrl+S or Cmd+S to save
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          handleSave();
+        }
+      }}
+    >
       {/* Navbar */}
       <div className="sticky top-0 z-10 bg-white border-b border-stone-200 px-4 md:px-8 h-[56px] flex items-center justify-between">
         <div className="flex items-center gap-2 md:gap-4 flex-1">
