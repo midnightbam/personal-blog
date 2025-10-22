@@ -1,9 +1,6 @@
 {
   "buildCommand": "npm run build --workspace=client",
   "outputDirectory": "client/dist",
-  "env": {
-    "CORS_ORIGIN": "@cors_origin"
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
