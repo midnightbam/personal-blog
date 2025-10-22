@@ -1,10 +1,40 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthContext } from '../contexts/AuthContext';
+import UserNavbar from './UserNavbar';
 
 const NavBar = () => {
   const navigate = useNavigate();
+  const { user, loading } = useAuthContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <nav className="sticky top-0 z-50 bg-[#F9F8F6] border-b border-gray-200 shadow-sm">
+        <div className="px-4 sm:px-6 md:px-8 lg:px-12 py-2 sm:py-2.5">
+          <div className="flex items-center justify-between">
+            <button 
+              onClick={() => navigate('/')}
+              className="text-lg sm:text-xl font-bold text-gray-900 hover:opacity-80 transition-opacity"
+            >
+              hh<span className="text-[#12B279]">.</span>
+            </button>
+            
+            {/* Loading indicator */}
+            <div className="w-20 h-8 bg-gray-200 animate-pulse rounded-full"></div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
+  // Show UserNavbar if user is logged in
+  if (user) {
+    return <UserNavbar />;
+  }
+
+  // Show regular NavBar if user is not logged in
   return (
     <nav className="sticky top-0 z-50 bg-[#F9F8F6] border-b border-gray-200 shadow-sm">
       <div className="px-4 sm:px-6 md:px-8 lg:px-12 py-2 sm:py-2.5">

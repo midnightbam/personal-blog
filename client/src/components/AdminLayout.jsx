@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { FileText, Folder, User, Bell, Lock, ExternalLink, LogOut, Menu, X } from 'lucide-react';
-import ArticleManagement from "./admin/ArticleManagement";
+import { FileText, Folder, User, Bell, Lock, LogOut, Menu, X, Link as LinkIcon } from 'lucide-react';
+import ArticleManagementSupabase from "./admin/ArticleManagementSupabase";
 import ArticleForm from "./admin/ArticleForm";
 import CategoryManagement from "./admin/CategoryManagement";
 import CategoryForm from "./admin/CategoryForm";
@@ -17,20 +17,12 @@ export default function AdminLayout() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [articles, setArticles] = useState([]);
 
   const [categories, setCategories] = useState([
     { id: 1, name: 'Cat' },
     { id: 2, name: 'General' },
     { id: 3, name: 'Inspiration' },
-  ]);
-
-  const [articles, setArticles] = useState([
-    { id: 1, title: "Understanding Cat Behavior: Why Your Feline Friend Acts the Way They D...", category: "Cat", status: "Published" },
-    { id: 2, title: "The Fascinating World of Cats: Why We Love Our Furry Friends", category: "Cat", status: "Published" },
-    { id: 3, title: "Finding Motivation: How to Stay Inspired Through Life's Challenges", category: "General", status: "Published" },
-    { id: 4, title: "The Science of the Cat's Purr: How It Benefits Cats and Humans Alike", category: "Cat", status: "Published" },
-    { id: 5, title: "Top 10 Health Tips to Keep Your Cat Happy and Healthy", category: "Cat", status: "Published" },
-    { id: 6, title: "Unlocking Creativity: Simple Habits to Spark Inspiration Daily", category: "Inspiration", status: "Published" }
   ]);
 
   const menuItems = [
@@ -98,10 +90,6 @@ export default function AdminLayout() {
     setEditingArticle(null);
   };
 
-  const handleDeleteArticle = (article) => {
-    setArticles(articles.filter(art => art.id !== article.id));
-  };
-
   const handleConfirmDelete = () => {
     if (activeSection === 'Category management') {
       setCategories(categories.filter(cat => cat.id !== itemToDelete.id));
@@ -111,7 +99,6 @@ export default function AdminLayout() {
   };
 
   const handleLogout = () => {
-    console.log('Logging out...');
     window.location.href = '/login';
   };
 
@@ -119,19 +106,26 @@ export default function AdminLayout() {
     window.location.href = '/';
   };
 
-  const renderContent = () => {
-    const contentProps = {
-      sidebarOpen,
-      setSidebarOpen
-    };
+  const contentProps = {
+    sidebarOpen,
+    setSidebarOpen
+  };
 
+  const renderContent = () => {
     if (activeSection === 'Article management') {
       if (currentView === 'create') {
         return <ArticleForm mode="create" onBack={handleBackToList} onSave={handleSaveArticle} {...contentProps} />;
       } else if (currentView === 'edit') {
         return <ArticleForm mode="edit" articleData={editingArticle} onBack={handleBackToList} onSave={handleSaveArticle} {...contentProps} />;
       } else {
-        return <ArticleManagement articles={articles} onCreateClick={handleCreateArticle} onEditClick={handleEditArticle} onDelete={handleDeleteArticle} {...contentProps} />;
+        return (
+          <ArticleManagementSupabase 
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            onCreateClick={handleCreateArticle}
+            onEditClick={handleEditArticle}
+          />
+        );
       }
     }
 
@@ -188,7 +182,7 @@ export default function AdminLayout() {
         {/* Close button for mobile */}
         <button
           onClick={() => setSidebarOpen(false)}
-          className="lg:hidden absolute top-4 left-4 p-2 hover:bg-stone-400 rounded-lg transition-colors"
+          className="lg:hidden absolute top-4 right-4 p-2 hover:bg-stone-400 rounded-lg transition-colors"
         >
           <X className="w-5 h-5 text-stone-700" />
         </button>
@@ -223,7 +217,7 @@ export default function AdminLayout() {
             onClick={handleGoToWebsite}
             className="w-full flex items-center gap-3 px-5 py-3 text-sm text-stone-600 hover:bg-stone-400 hover:text-stone-800 transition-all duration-200"
           >
-            <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
+            <LinkIcon className="w-4 h-4" strokeWidth={1.5} />
             <span>hh. website</span>
           </button>
           <button 

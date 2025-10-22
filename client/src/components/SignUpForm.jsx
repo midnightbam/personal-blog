@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { authService } from "../lib/auth";
+import { supabase } from "../lib/supabase";
 
 const SignUpForm = () => {
   const [formData, setFormData] = useState({
@@ -17,6 +17,7 @@ const SignUpForm = () => {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState(null);
 
   const navigate = useNavigate();
 
@@ -25,7 +26,8 @@ const SignUpForm = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
-    setError(""); // Clear error when user types
+    setError("");
+    setDebugInfo(null);
   };
 
   const handleBlur = (field) => {
@@ -35,13 +37,11 @@ const SignUpForm = () => {
     });
   };
 
-  // Email validation
   const isValidEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  // Password validation
   const isValidPassword = (password) => {
     const hasLetter = /[a-zA-Z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
@@ -54,7 +54,6 @@ const SignUpForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate before submission
     if (!isValidEmail(formData.email) || !isValidPassword(formData.password)) {
       setTouched({ email: true, password: true });
       return;
@@ -62,38 +61,99 @@ const SignUpForm = () => {
 
     setError("");
     setLoading(true);
+    setDebugInfo(null);
 
     try {
-      // Sign up the user using auth service
-      const authData = await authService.signup(
-        formData.email,
-        formData.password,
-        {
-          name: formData.name,
-          username: formData.username,
-        }
-      );
+      console.log("🔵 Starting signup process for:", formData.email);
 
-      // Check if email confirmation is required
-      if (authData?.user?.identities?.length === 0) {
-        setError("This email is already registered. Please log in instead.");
-        return;
+      // Step 1: Sign up with Supabase Auth
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name,
+            username: formData.username,
+          },
+        },
+      });
+
+      console.log("🔵 Auth signup response:", { authData, error: signUpError });
+
+      if (signUpError) {
+        console.error("❌ Signup error:", signUpError);
+        throw signUpError;
       }
 
-      console.log("User signed up:", authData.user);
+      // Check if email is already registered
+      if (authData?.user?.identities?.length === 0) {
+        setDebugInfo({
+          type: "error",
+          message: "This email is already registered",
+        });
+        throw new Error("This email is already registered. Please log in instead.");
+      }
 
-      // If email confirmation is enabled, show message
+      const user = authData.user;
+      console.log("✅ User created in auth:", user.id);
+
+      // Step 2: Create user profile in users table
+      const { error: userInsertError } = await supabase
+        .from('users')
+        .insert([{
+          id: user.id,
+          email: user.email,
+          name: formData.name,
+          username: formData.username,
+          avatar_url: null,
+          created_at: new Date().toISOString(),
+        }]);
+
+      if (userInsertError) {
+        console.error("⚠️ Error creating user profile:", userInsertError);
+        setDebugInfo({
+          type: "warning",
+          message: "User created but profile setup incomplete",
+        });
+      } else {
+        console.log("✅ User profile created");
+      }
+
+      // Step 3: Create profile with role
+      const { error: profileInsertError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: user.id,
+          role: 'user',
+          created_at: new Date().toISOString(),
+        }]);
+
+      if (profileInsertError) {
+        console.error("⚠️ Error creating profile:", profileInsertError);
+        setDebugInfo({
+          type: "warning",
+          message: "User created but role assignment incomplete",
+        });
+      } else {
+        console.log("✅ Profile created with role: user");
+      }
+
+      // Check if email confirmation is required
       if (authData.user && !authData.session) {
-        navigate("/success", { 
+        console.log("📧 Email confirmation required");
+        navigate("/registration-success", { 
           state: { 
-            message: "Please check your email to confirm your account before logging in." 
+            message: "Please check your email to confirm your account before logging in.",
+            requiresConfirmation: true,
           } 
         });
       } else {
-        // If no email confirmation needed, redirect to home
-        navigate("/");
+        console.log("✅ No email confirmation needed, redirecting to success page");
+        navigate("/registration-success");
       }
+
     } catch (error) {
+      console.error("❌ Signup failed:", error);
       setError(error.message || "Failed to sign up. Please try again.");
     } finally {
       setLoading(false);
@@ -204,6 +264,17 @@ const SignUpForm = () => {
             )}
           </div>
 
+          {/* Debug Info */}
+          {debugInfo && (
+            <div className={`${
+              debugInfo.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-yellow-50 border-yellow-200 text-yellow-700'
+            } border px-4 py-3 rounded-lg text-sm`}>
+              <p className="font-semibold">{debugInfo.type === 'error' ? 'Error:' : 'Warning:'}</p>
+              <p>{debugInfo.message}</p>
+            </div>
+          )}
+
+          {/* Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
               {error}

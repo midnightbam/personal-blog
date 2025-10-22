@@ -10,17 +10,57 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import blogPosts from "../data/blogPosts";
+import { supabase } from "@/lib/supabase";
 
 export default function Articles() {
-  const categories = ["Highlight", "Cat", "Inspiration", "General"];
+  const [allCategories, setAllCategories] = useState([]);
   const [category, setCategory] = useState("Highlight");
-  const [posts, setPosts] = useState([]);
+  const [allPosts, setAllPosts] = useState([]);
+  const [filteredPosts, setFilteredPosts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch categories and articles
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+
+        // Fetch categories
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('categories')
+          .select('name')
+          .order('name', { ascending: true });
+
+        if (categoriesError) throw categoriesError;
+
+        const categoryNames = categoriesData?.map(cat => cat.name) || [];
+        setAllCategories(["Highlight", ...categoryNames]);
+
+        // Fetch published articles
+        const { data: articlesData, error: articlesError } = await supabase
+          .from('articles')
+          .select('*')
+          .eq('status', 'Published')
+          .order('date', { ascending: false });
+
+        if (articlesError) throw articlesError;
+
+        setAllPosts(articlesData || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setAllPosts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Filter posts based on category and search
   useEffect(() => {
-    let filtered = [...blogPosts];
+    let filtered = [...allPosts];
 
     // Filter by category
     if (category !== "Highlight") {
@@ -36,14 +76,25 @@ export default function Articles() {
       );
     }
 
-    setPosts(filtered);
-  }, [category, searchQuery]);
+    setFilteredPosts(filtered);
+  }, [category, searchQuery, allPosts]);
 
   const handleCategoryChange = (value) => {
     if (value !== category) {
       setCategory(value);
     }
   };
+
+  if (isLoading) {
+    return (
+      <section className="bg-gray-50 py-8 lg:py-10 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-gray-900 mx-auto mb-3" />
+          <p className="text-gray-600">Loading articles...</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="bg-gray-50 py-8 lg:py-10">
@@ -57,8 +108,8 @@ export default function Articles() {
         <div className="hidden lg:block">
           <div className="bg-[#EFEEEB] rounded-xl shadow-sm p-3 flex items-center justify-between gap-4">
             {/* Category Buttons */}
-            <div className="flex items-center gap-2">
-              {categories.map((cat) => (
+            <div className="flex items-center gap-2 flex-wrap">
+              {allCategories.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => handleCategoryChange(cat)}
@@ -110,7 +161,7 @@ export default function Articles() {
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent className="bg-white">
-                {categories.map((cat) => (
+                {allCategories.map((cat) => (
                   <SelectItem key={cat} value={cat} className="flex items-center gap-2">
                     {cat}
                   </SelectItem>
@@ -121,18 +172,22 @@ export default function Articles() {
         </div>
 
         {/* Blog Cards Grid */}
-        {posts.length > 0 ? (
+        {filteredPosts.length > 0 ? (
           <article className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
-            {posts.map((blog, index) => (
+            {filteredPosts.map((blog) => (
               <BlogCard
-                key={`${blog.id}-${index}`}
+                key={blog.id}
                 id={blog.id}
-                image={blog.image}
+                image={blog.thumbnail}
                 category={blog.category}
                 title={blog.title}
                 description={blog.description}
-                author={blog.author}
-                date={blog.date}
+                author={blog.author_name}
+                date={new Date(blog.date).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
               />
             ))}
           </article>
@@ -163,6 +218,9 @@ function BlogCard({ id, image, category, title, description, author, date }) {
           className="w-full h-full object-cover rounded-md transition-transform duration-300 group-hover:scale-105"
           src={image}
           alt={title}
+          onError={(e) => {
+            e.target.src = "https://via.placeholder.com/400x300";
+          }}
         />
       </button>
       <div className="flex flex-col">

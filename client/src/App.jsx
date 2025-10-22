@@ -15,6 +15,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Toaster } from "@/components/ui/sonner";
 
+
 // Layout wrapper for public pages
 function PublicLayout({ children }) {
   return (

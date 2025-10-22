@@ -1,16 +1,50 @@
-import React, { useState } from "react";
-import { User, Lock } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { User, Lock, ArrowLeft } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { imageUploadService } from "@/services/imageUploadService";
+import { toast as sonnerToast } from "sonner";
+
+// Custom toast function
+const toastSuccess = (message, description = "") => {
+  sonnerToast.success(message, {
+    description,
+    duration: 4000,
+    position: "top-center",
+    style: {
+      background: '#12B279',
+      color: 'white',
+      border: 'none',
+    },
+    classNames: {
+      description: '!text-white',
+      closeButton: '!bg-transparent !text-white hover:!bg-white/10 !absolute !right-1 !left-auto !top-4',
+    },
+    closeButton: true,
+  });
+};
+
+const toastError = (message) => {
+  sonnerToast.error(message, {
+    duration: 4000,
+    position: "top-center",
+  });
+};
 
 export default function Profile() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, loading: authLoading } = useAuthContext();
   const [formData, setFormData] = useState({
-    name: "Moodeng ja",
-    username: "moodeng.cute",
-    email: "moodeng.cute@gmail.com",
-    avatar: "https://i.imgur.com/8Km9tLL.png",
+    name: "",
+    username: "",
+    email: "",
+    avatar: "",
   });
 
   const [showAlert, setShowAlert] = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || "profile");
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -19,25 +53,205 @@ export default function Profile() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  // Fetch user data on component mount
+  useEffect(() => {
+    if (!authLoading && user) {
+      fetchUserProfile();
+    } else if (!authLoading && !user) {
+      navigate("/login");
+    }
+  }, [user, authLoading]);
+
+  const fetchUserProfile = async () => {
+    try {
+      setDataLoading(true);
+      
+      if (!user) {
+        return;
+      }
+
+      // Fetch user profile from users table
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('name, username')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error("Error fetching profile:", profileError);
+      }
+
+      // Get first letter of email for placeholder
+      const emailInitial = user.email ? user.email.charAt(0).toUpperCase() : "U";
+      const placeholderAvatar = `https://ui-avatars.com/api/?name=${emailInitial}&background=12B279&color=fff&size=200`;
+
+      // Try to get avatar from avatars bucket
+      let avatarUrl = placeholderAvatar;
+      try {
+        const { data: avatarData } = await supabase
+          .storage
+          .from('avatars')
+          .list(user.id, {
+            limit: 1,
+            sortBy: { column: 'created_at', order: 'desc' }
+          });
+
+        if (avatarData && avatarData.length > 0) {
+          const { data } = supabase
+            .storage
+            .from('avatars')
+            .getPublicUrl(`${user.id}/${avatarData[0].name}`);
+          
+          if (data?.publicUrl) {
+            avatarUrl = data.publicUrl;
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching avatar:", error);
+      }
+
+      setFormData({
+        name: profile?.name || "",
+        username: profile?.username || "",
+        email: user.email || "",
+        avatar: avatarUrl,
+      });
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      if (user) {
+        const emailInitial = user.email ? user.email.charAt(0).toUpperCase() : "U";
+        const placeholderAvatar = `https://ui-avatars.com/api/?name=${emailInitial}&background=12B279&color=fff&size=200`;
+        
+        setFormData({
+          name: "",
+          username: "",
+          email: user.email || "",
+          avatar: placeholderAvatar,
+        });
+      }
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  const validateUsername = (username) => {
+    if (!username) return "Username is required";
+    if (username.length < 3) return "Username must be at least 3 characters";
+    if (username.length > 30) return "Username must be at most 30 characters";
+    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+      return "Username can only contain letters, numbers, hyphens, and underscores";
+    }
+    return "";
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setFormData({ ...formData, avatar: imageUrl });
+    
+    // Clear username error when user types
+    if (name === "username") {
+      setUsernameError("");
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    try {
+      setUploadingAvatar(true);
+
+      // Upload to avatars bucket
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      if (!data?.publicUrl) {
+        throw new Error("Failed to get public URL");
+      }
+
+      setFormData({ ...formData, avatar: data.publicUrl });
+      toastSuccess("Avatar uploaded successfully");
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      toastError(error.message || "Failed to upload avatar");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Saved profile data:", formData);
-    setShowAlert(true);
-    setTimeout(() => setShowAlert(false), 3000);
+    
+    if (!formData.name.trim()) {
+      toastError("Name is required");
+      return;
+    }
+
+    // Validate username
+    const usernameValidationError = validateUsername(formData.username);
+    if (usernameValidationError) {
+      setUsernameError(usernameValidationError);
+      toastError(usernameValidationError);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      if (!user) throw new Error("No user logged in");
+
+      // Update user profile
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: formData.name,
+          username: formData.username,
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        // Check if it's a unique constraint error
+        if (error.code === '23505') {
+          setUsernameError("This username is already taken");
+          toastError("This username is already taken");
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      toastSuccess("Profile saved successfully", "Your profile has been successfully updated");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toastError(error.message || "Failed to update profile");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePasswordChange = (e) => {
@@ -52,13 +266,13 @@ export default function Profile() {
     return password.length >= 6 && hasLetter && hasNumber;
   };
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setPasswordError("");
     setPasswordSuccess("");
 
     if (!passwordForm.currentPassword) {
-      setPasswordError("Please enter your current password");
+      setPasswordError("Current password is required");
       return;
     }
 
@@ -74,51 +288,80 @@ export default function Profile() {
       return;
     }
 
-    setLoading(true);
-    setTimeout(() => {
+    try {
+      setLoading(true);
+
+      const { error } = await supabase.auth.updateUser({
+        password: passwordForm.newPassword
+      });
+
+      if (error) throw error;
+
       setPasswordSuccess("Password updated successfully!");
+      toastSuccess("Password updated successfully");
       setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (error) {
+      console.error("Error updating password:", error);
+      setPasswordError(error.message || "Failed to update password");
+      toastError("Failed to update password");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const tabTitle = activeTab === "profile" ? "Profile" : "Reset password";
 
+  if (authLoading || dataLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F9F8F6]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-[calc(100vh-73px)] bg-[#F9F8F6] flex flex-col">
-      {showAlert && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-[#22C55E] text-white px-6 py-3 rounded-lg shadow-md text-sm font-medium text-center z-50">
-          <p className="font-semibold">Saved profile</p>
-          <p>Your profile has been successfully updated</p>
-        </div>
-      )}
-
       {/* Mobile Layout */}
       <div className="md:hidden w-full flex flex-col">
-        {/* Mobile Top tabs */}
-        <div className="flex justify-center gap-6 border-b border-gray-300 pb-2 mb-3 px-4 pt-3 w-full">
+        {/* Mobile Top tabs with Back Button */}
+        <div className="flex items-center justify-between border-b border-gray-300 pb-2 mb-3 px-4 pt-3 w-full">
           <button
-            onClick={() => setActiveTab("profile")}
-            className={`flex items-center gap-2 text-sm font-medium transition-colors ${
-              activeTab === "profile"
-                ? "text-gray-900 border-b-2 border-gray-900"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
+            onClick={() => navigate("/")}
+            className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+            aria-label="Go back"
           >
-            <User size={16} />
-            Profile
+            <ArrowLeft size={20} className="text-gray-900" />
           </button>
-          <button
-            onClick={() => setActiveTab("reset")}
-            className={`flex items-center gap-2 text-sm font-medium transition-colors ${
-              activeTab === "reset"
-                ? "text-gray-900 border-b-2 border-gray-900"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <Lock size={16} />
-            Reset password
-          </button>
+          
+          <div className="flex gap-6">
+            <button
+              onClick={() => setActiveTab("profile")}
+              className={`flex items-center gap-2 text-sm font-medium transition-colors ${
+                activeTab === "profile"
+                  ? "text-gray-900 border-b-2 border-gray-900"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <User size={16} />
+              Profile
+            </button>
+            <button
+              onClick={() => setActiveTab("reset")}
+              className={`flex items-center gap-2 text-sm font-medium transition-colors ${
+                activeTab === "reset"
+                  ? "text-gray-900 border-b-2 border-gray-900"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <Lock size={16} />
+              Reset password
+            </button>
+          </div>
+          
+          <div className="w-8"></div>
         </div>
 
         {/* Mobile Header */}
@@ -127,12 +370,16 @@ export default function Profile() {
             src={formData.avatar}
             alt="Profile"
             className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+            onError={(e) => {
+              const emailInitial = user?.email ? user.email.charAt(0).toUpperCase() : "U";
+              e.target.src = `https://ui-avatars.com/api/?name=${emailInitial}&background=12B279&color=fff&size=200`;
+            }}
           />
-          <p className="text-lg font-semibold text-gray-900">{formData.name}</p>
+          <p className="text-lg font-semibold text-gray-900">{formData.name || "User"}</p>
           <p className="text-sm font-medium text-gray-900 ml-2">{tabTitle}</p>
         </div>
 
-        {/* Mobile Content - Full screen form */}
+        {/* Mobile Content */}
         <div className="flex-1 w-full px-4 py-6">
           {activeTab === "profile" && (
             <div className="space-y-4">
@@ -141,12 +388,20 @@ export default function Profile() {
                   src={formData.avatar}
                   alt="Profile"
                   className="w-24 h-24 rounded-full object-cover"
+                  onError={(e) => {
+                    const emailInitial = user?.email ? user.email.charAt(0).toUpperCase() : "U";
+                    e.target.src = `https://ui-avatars.com/api/?name=${emailInitial}&background=12B279&color=fff&size=200`;
+                  }}
                 />
                 <label
                   htmlFor="avatar"
-                  className="mt-3 px-4 py-2 border border-gray-400 rounded-full text-sm font-medium text-gray-800 bg-white cursor-pointer hover:bg-gray-50 transition"
+                  className="mt-3 px-4 py-2 border border-gray-400 rounded-full text-sm font-medium text-gray-800 bg-white cursor-pointer hover:bg-gray-50 transition disabled:opacity-50"
+                  style={{
+                    pointerEvents: uploadingAvatar ? "none" : "auto",
+                    opacity: uploadingAvatar ? 0.5 : 1
+                  }}
                 >
-                  Upload profile picture
+                  {uploadingAvatar ? "Uploading..." : "Upload profile picture"}
                 </label>
                 <input
                   id="avatar"
@@ -154,6 +409,7 @@ export default function Profile() {
                   accept="image/*"
                   onChange={handleImageUpload}
                   className="hidden"
+                  disabled={uploadingAvatar}
                 />
               </div>
 
@@ -167,6 +423,7 @@ export default function Profile() {
                   value={formData.name}
                   onChange={handleChange}
                   className="w-full h-10 px-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-gray-500 text-sm"
+                  placeholder="Enter your name"
                 />
               </div>
 
@@ -177,8 +434,17 @@ export default function Profile() {
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
-                  className="w-full h-10 px-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-gray-500 text-sm"
+                  className={`w-full h-10 px-3 border rounded-lg bg-white focus:outline-none text-sm ${
+                    usernameError ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-gray-500'
+                  }`}
+                  placeholder="Enter your username"
                 />
+                {usernameError && (
+                  <p className="text-xs text-red-600">{usernameError}</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  3-30 characters, letters, numbers, hyphens, and underscores only
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -194,15 +460,16 @@ export default function Profile() {
 
               <button
                 onClick={handleSubmit}
-                className="w-full py-2 bg-[#26231E] text-white rounded-full hover:bg-[#3d3832] transition text-sm font-medium mt-4"
+                disabled={loading || uploadingAvatar}
+                className="w-full py-2 bg-[#26231E] text-white rounded-full hover:bg-[#3d3832] transition text-sm font-medium mt-4 disabled:opacity-50"
               >
-                Save
+                {loading ? "Saving..." : "Save"}
               </button>
             </div>
           )}
 
           {activeTab === "reset" && (
-            <div className="space-y-5">
+            <form onSubmit={handlePasswordSubmit} className="space-y-5">
               <div>
                 <label className="block text-base font-medium text-gray-700 mb-3">
                   Current password
@@ -213,7 +480,7 @@ export default function Profile() {
                   value={passwordForm.currentPassword}
                   onChange={handlePasswordChange}
                   className="w-full h-12 px-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-gray-500 text-base"
-                  placeholder="Enter current password"
+                  placeholder="Current password"
                 />
               </div>
 
@@ -261,13 +528,13 @@ export default function Profile() {
               )}
 
               <button
-                onClick={handlePasswordSubmit}
+                type="submit"
                 className="w-full py-3 bg-[#26231E] text-white rounded-full hover:bg-[#3d3832] transition text-base font-medium disabled:opacity-50 mt-4"
                 disabled={loading}
               >
                 {loading ? "Updating..." : "Reset password"}
               </button>
-            </div>
+            </form>
           )}
         </div>
       </div>
@@ -280,8 +547,12 @@ export default function Profile() {
             src={formData.avatar}
             alt="Profile"
             className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+            onError={(e) => {
+              const emailInitial = user?.email ? user.email.charAt(0).toUpperCase() : "U";
+              e.target.src = `https://ui-avatars.com/api/?name=${emailInitial}&background=12B279&color=fff&size=200`;
+            }}
           />
-          <p className="text-lg font-semibold text-gray-900">{formData.name}</p>
+          <p className="text-lg font-semibold text-gray-900">{formData.name || "User"}</p>
           <div className="border-l border-gray-300 h-6 mx-3"></div>
           <p className="text-lg font-semibold text-gray-900">{tabTitle}</p>
         </div>
@@ -316,28 +587,36 @@ export default function Profile() {
 
           {/* Desktop Main Content */}
           <div className="flex-1">
-            {/* Form Container */}
             <div className="bg-[#EFEEEB] rounded-xl shadow-sm p-8 w-full">
               {activeTab === "profile" && (
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-6">
                   <div className="flex flex-col items-center">
                     <img
                       src={formData.avatar}
                       alt="Profile"
                       className="w-24 h-24 rounded-full object-cover"
+                      onError={(e) => {
+                        const emailInitial = user?.email ? user.email.charAt(0).toUpperCase() : "U";
+                        e.target.src = `https://ui-avatars.com/api/?name=${emailInitial}&background=12B279&color=fff&size=200`;
+                      }}
                     />
                     <label
-                      htmlFor="avatar"
-                      className="mt-3 px-4 py-2 border border-gray-400 rounded-full text-sm font-medium text-gray-800 cursor-pointer hover:bg-gray-100 transition"
+                      htmlFor="avatar-desktop"
+                      className="mt-3 px-4 py-2 border border-gray-400 rounded-full text-sm font-medium text-gray-800 cursor-pointer hover:bg-gray-100 transition disabled:opacity-50"
+                      style={{
+                        pointerEvents: uploadingAvatar ? "none" : "auto",
+                        opacity: uploadingAvatar ? 0.5 : 1
+                      }}
                     >
-                      Upload profile picture
+                      {uploadingAvatar ? "Uploading..." : "Upload profile picture"}
                     </label>
                     <input
-                      id="avatar"
+                      id="avatar-desktop"
                       type="file"
                       accept="image/*"
                       onChange={handleImageUpload}
                       className="hidden"
+                      disabled={uploadingAvatar}
                     />
                   </div>
 
@@ -353,6 +632,7 @@ export default function Profile() {
                       value={formData.name}
                       onChange={handleChange}
                       className="w-full h-10 px-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-gray-500 text-sm"
+                      placeholder="Enter your name"
                     />
                   </div>
 
@@ -365,8 +645,17 @@ export default function Profile() {
                       name="username"
                       value={formData.username}
                       onChange={handleChange}
-                      className="w-full h-10 px-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-gray-500 text-sm"
+                      className={`w-full h-10 px-3 border rounded-lg bg-white focus:outline-none text-sm ${
+                        usernameError ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-gray-500'
+                      }`}
+                      placeholder="Enter your username"
                     />
+                    {usernameError && (
+                      <p className="text-xs text-red-600">{usernameError}</p>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      3-30 characters, letters, numbers, hyphens, and underscores only
+                    </p>
                   </div>
 
                   <div className="space-y-3">
@@ -384,15 +673,17 @@ export default function Profile() {
 
                   <button
                     type="submit"
-                    className="px-6 py-2 bg-[#26231E] text-white rounded-full hover:bg-[#3d3832] transition text-sm font-medium"
+                    disabled={loading || uploadingAvatar}
+                    onClick={handleSubmit}
+                    className="px-6 py-2 bg-[#26231E] text-white rounded-full hover:bg-[#3d3832] transition text-sm font-medium disabled:opacity-50"
                   >
-                    Save
+                    {loading ? "Saving..." : "Save"}
                   </button>
-                </form>
+                </div>
               )}
 
               {activeTab === "reset" && (
-                <div className="space-y-5 max-w-md">
+                <form onSubmit={handlePasswordSubmit} className="space-y-5 max-w-md">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Current password
@@ -403,7 +694,7 @@ export default function Profile() {
                       value={passwordForm.currentPassword}
                       onChange={handlePasswordChange}
                       className="w-full h-10 px-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-gray-500 text-sm"
-                      placeholder="Enter current password"
+                      placeholder="Current password"
                     />
                   </div>
 
@@ -451,13 +742,13 @@ export default function Profile() {
                   )}
 
                   <button
-                    onClick={handlePasswordSubmit}
+                    type="submit"
                     className="px-6 py-2 bg-[#26231E] text-white rounded-full hover:bg-[#3d3832] transition text-sm font-medium disabled:opacity-50"
                     disabled={loading}
                   >
                     {loading ? "Updating..." : "Reset password"}
                   </button>
-                </div>
+                </form>
               )}
             </div>
           </div>
