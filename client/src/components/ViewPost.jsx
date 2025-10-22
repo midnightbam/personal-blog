@@ -82,25 +82,45 @@ export default function ViewPost() {
 
         setPost(postData);
 
-        // Fetch comments with user data
+        // Fetch comments
         const { data: commentsData, error: commentsError } = await supabase
           .from('comments')
           .select(`
-            *,
-            users (
-              id,
-              name,
-              username,
-              avatar_url
-            )
+            id,
+            article_id,
+            user_id,
+            comment_text,
+            created_at,
+            updated_at
           `)
           .eq('article_id', postId)
           .order('created_at', { ascending: false });
 
         if (commentsError) {
           console.error('Error fetching comments:', commentsError);
+          setComments([]);
         } else {
-          setComments(commentsData || []);
+          // Fetch user data for comments
+          if (commentsData && commentsData.length > 0) {
+            const userIds = [...new Set(commentsData.map(c => c.user_id))];
+            const { data: usersData, error: usersError } = await supabase
+              .from('users')
+              .select('id, name, username, avatar_url')
+              .in('id', userIds);
+
+            if (!usersError && usersData) {
+              // Merge user data with comments
+              const enrichedComments = commentsData.map(comment => ({
+                ...comment,
+                users: usersData.find(u => u.id === comment.user_id)
+              }));
+              setComments(enrichedComments);
+            } else {
+              setComments(commentsData || []);
+            }
+          } else {
+            setComments(commentsData || []);
+          }
         }
 
         // Fetch likes count
@@ -234,61 +254,70 @@ export default function ViewPost() {
         // Update local state
         setComments((prev) =>
           prev.map((c) =>
-            c.id === editingCommentId ? { ...c, comment_text: commentText } : c
+            c.id === editingCommentId ? { ...c, content: commentText } : c
           )
         );
         toastSuccess("Comment updated");
         setEditingCommentId(null);
       } else {
-        // Create new comment
-        const { data: newComment, error } = await supabase
-          .from('comments')
-          .insert([{
+        // Create new comment - insert only
+        try {
+          const { error: insertError } = await supabase
+            .from('comments')
+            .insert({
+              article_id: postId,
+              user_id: user.id,
+              comment_text: commentText
+            });
+
+          if (insertError) {
+            console.error('Insert error:', insertError);
+            throw insertError;
+          }
+
+          // Don't try to fetch with select - just add to state with what we know
+          const newComment = {
+            id: `temp-${Date.now()}`, // Temporary ID until page refresh
             article_id: postId,
             user_id: user.id,
             comment_text: commentText,
-            created_at: new Date().toISOString()
-          }])
-          .select(`
-            *,
-            users (
-              id,
-              name,
-              username,
-              avatar_url
-            )
-          `)
-          .single();
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
 
-        if (error) throw error;
+          // Fetch user data for the new comment
+          const { data: userData } = await supabase
+            .from('users')
+            .select('id, name, username, avatar_url')
+            .eq('id', user.id)
+            .single();
 
-        // Add to local state
-        setComments((prev) => [newComment, ...prev]);
-        toastSuccess("Comment posted!");
+          // Create comment object with user data
+          const commentWithUser = {
+            ...newComment,
+            users: userData || { id: user.id, name: '', username: '', avatar_url: '' }
+          };
 
-        // Get user data for notification
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('name')
-          .eq('id', user.id)
-          .single();
+          // Add to local state
+          setComments((prev) => [commentWithUser, ...prev]);
+          toastSuccess("Comment posted!");
 
-        if (userError) {
-          console.error('Error fetching user data:', userError);
-          throw userError;
+          const commenterName = userData?.name || user.email;
+
+          // Create notifications
+          await notificationService.notifyNewComment(
+            postId,
+            user.id,
+            commenterName,
+            post.title,
+            commentText
+          );
+
+          console.log("Notifications created for new comment");
+        } catch (err) {
+          console.error("Error in comment flow:", err);
+          throw err;
         }
-
-        const commenterName = userData?.name || user.email;
-
-        // Create notifications
-        await notificationService.notifyNewComment(
-          postId,
-          user.id,
-          commenterName,
-          post.title
-        );
-
-        console.log("Notifications created for new comment");
       }
 
       setCommentText("");
@@ -616,10 +645,22 @@ function CommentsSection({
           Leave a Comment
         </h3>
         <div className="space-y-2">
+          <label htmlFor="comment-input" className="block text-sm font-medium text-gray-700">
+            Your Comment
+          </label>
           <textarea
+            id="comment-input"
+            name="comment"
             placeholder="What are your thoughts?"
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter to submit (but allow Shift+Enter for new line)
+              if (e.key === 'Enter' && !e.shiftKey && isLoggedIn && !isSubmitting && commentText.trim()) {
+                e.preventDefault();
+                onSubmit();
+              }
+            }}
             onClick={handleTextareaClick}
             disabled={!isLoggedIn}
             className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:border-gray-900 transition-colors h-20 text-sm disabled:bg-gray-50 disabled:cursor-pointer"
@@ -744,7 +785,8 @@ function AuthorBio({ author }) {
   const [authorData, setAuthorData] = useState({
     name: author?.author_name || "Unknown",
     username: "",
-    avatar: null
+    avatar: null,
+    bio: ""
   });
 
   useEffect(() => {
@@ -754,7 +796,7 @@ function AuthorBio({ author }) {
       try {
         const { data, error } = await supabase
           .from('users')
-          .select('name, username, avatar_url')
+          .select('name, username, avatar_url, bio')
           .eq('id', author.user_id)
           .single();
 
@@ -766,7 +808,8 @@ function AuthorBio({ author }) {
         setAuthorData({
           name: data.name || author.author_name,
           username: data.username || "",
-          avatar: data.avatar_url
+          avatar: data.avatar_url,
+          bio: data.bio || ""
         });
       } catch (error) {
         console.error('Error:', error);
@@ -799,8 +842,14 @@ function AuthorBio({ author }) {
       </div>
       <hr className="border-[#DAD6D1] mb-3" />
       <div className="text-gray-700 space-y-2 text-xs leading-relaxed">
-        <p>I am a writer sharing insights and experiences.</p>
-        <p>I enjoy creating content that informs and inspires readers.</p>
+        {authorData.bio ? (
+          <p>{authorData.bio}</p>
+        ) : (
+          <>
+            <p>Just a chill human who likes reading, YouTube binges, and long naps (when not writing here).</p>
+            <p>I enjoy sharing random thoughts, cozy vibes, and whatever I find interesting along the way.</p>
+          </>
+        )}
       </div>
     </div>
   );

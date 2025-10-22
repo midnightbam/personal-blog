@@ -32,14 +32,14 @@ const toastSuccess = (message, description = "") => {
   });
 };
 
-export default function ArticleForm({ mode = 'create', articleData = null, onBack, onSave, onDelete, sidebarOpen, setSidebarOpen }) {
+export default function ArticleForm({ mode = 'create', articleData = null, onBack, onSave, onDelete, setSidebarOpen }) {
   const [formData, setFormData] = useState({
     id: articleData?.id || null,
     thumbnail: articleData?.thumbnail || null,
     category: articleData?.category || '',
     authorName: 'Punyanuch K.', // Locked author name
     title: articleData?.title || '',
-    introduction: articleData?.introduction || '',
+    introduction: articleData?.description || articleData?.introduction || '',
     content: articleData?.content || '',
     status: articleData?.status || 'Published'
   });
@@ -47,6 +47,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
   const [thumbnailPreview, setThumbnailPreview] = useState(articleData?.thumbnail || null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const contentRef = useRef(null);
@@ -112,6 +113,54 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
     }
   };
 
+  // Handle drag over
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  // Handle drag leave
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  // Handle drop
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+      sonnerToast.error("Please drop an image file");
+      return;
+    }
+
+    try {
+      setUploadingThumbnail(true);
+      console.log("Starting drag & drop thumbnail upload...");
+
+      const articleId = articleData?.id || `article-${Date.now()}`;
+      const publicUrl = await imageUploadService.uploadArticleThumbnail(file, articleId);
+      
+      setThumbnailPreview(publicUrl);
+      setFormData({ ...formData, thumbnail: publicUrl });
+      sonnerToast.success("Thumbnail uploaded successfully");
+      console.log("Thumbnail uploaded:", publicUrl);
+    } catch (error) {
+      console.error("Error uploading thumbnail:", error);
+      sonnerToast.error("Failed to upload thumbnail");
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
+
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
   };
@@ -138,7 +187,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
       };
 
       if (mode === 'create') {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('articles')
           .insert([{
             title: articleToSave.title,
@@ -160,7 +209,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
           return;
         }
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('articles')
           .update({
             title: articleToSave.title,
@@ -225,7 +274,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
       };
 
       if (mode === 'create') {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('articles')
           .insert([{
             title: articleToSave.title,
@@ -248,9 +297,9 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
           return;
         }
 
-        console.log("Article published:", data);
+        console.log("Article published");
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('articles')
           .update({
             title: articleToSave.title,
@@ -272,7 +321,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
           return;
         }
 
-        console.log("Article updated:", data);
+        console.log("Article updated");
       }
 
       if (onSave) {
@@ -299,7 +348,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
     try {
       setUploadingThumbnail(true);
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('articles')
         .update({
           title: formData.title,
@@ -379,7 +428,20 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
   };
 
   return (
-    <div className="flex-1 bg-stone-100 min-h-screen pb-24 lg:pb-0">
+    <div 
+      className="flex-1 bg-stone-100 min-h-screen pb-24 lg:pb-0"
+      onKeyDown={(e) => {
+        // Ctrl+S or Cmd+S to save
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          if (mode === 'create') {
+            handleSavePublish();
+          } else {
+            handleSave();
+          }
+        }
+      }}
+    >
       {/* Navbar */}
       <div className="sticky top-0 z-10 bg-white border-b border-stone-200 px-4 md:px-8 h-[56px] flex items-center justify-between">
         <div className="flex items-center gap-2 md:gap-4 flex-1">
@@ -435,11 +497,25 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
           <div className="space-y-4">
             <div className="w-full">
               {!thumbnailPreview ? (
-                <div className="bg-stone-200 rounded-lg w-full h-48 md:h-80 flex items-center justify-center">
+                <div 
+                  className={`bg-stone-200 rounded-lg w-full h-64 md:h-96 flex items-center justify-center transition-all ${
+                    isDragging ? 'bg-stone-300 border-2 border-dashed border-orange-400 ring-2 ring-orange-200' : ''
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
                   <Image className="w-12 h-12 text-stone-400" />
                 </div>
               ) : (
-                <div className="bg-stone-200 rounded-lg w-full h-48 md:h-80 overflow-hidden">
+                <div 
+                  className={`bg-stone-200 rounded-lg w-full h-64 md:h-96 overflow-hidden transition-all ${
+                    isDragging ? 'border-2 border-dashed border-orange-400 ring-2 ring-orange-200' : ''
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
                   <img
                     src={thumbnailPreview}
                     alt="Thumbnail preview"
@@ -463,13 +539,20 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
               />
               <label
                 htmlFor="thumbnail"
-                className="inline-flex items-center gap-2 bg-white text-stone-700 px-6 py-2.5 rounded-full text-sm font-medium border border-stone-300 hover:bg-stone-50 transition-colors cursor-pointer disabled:opacity-50"
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium border transition-colors cursor-pointer disabled:opacity-50 ${
+                  isDragging
+                    ? 'bg-stone-100 border-stone-400 text-stone-800'
+                    : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-50'
+                }`}
                 style={{
                   pointerEvents: uploadingThumbnail ? "none" : "auto",
                   opacity: uploadingThumbnail ? 0.5 : 1
                 }}
               >
-                {uploadingThumbnail ? "Uploading..." : "Upload thumbnail image"}
+                {uploadingThumbnail ? "Uploading..." : "Upload or drop thumbnail image"}
               </label>
             </div>
           </div>
@@ -610,7 +693,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
             data-placeholder="Write your article content here... Use the toolbar above to format your text."
           />
           
-          <style jsx>{`
+          <style>{`
             [contentEditable]:empty:before {
               content: attr(data-placeholder);
               color: #a8a29e;

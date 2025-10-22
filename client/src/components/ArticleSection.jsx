@@ -15,6 +15,7 @@ export default function Articles() {
   const [allCategories, setAllCategories] = useState([]);
   const [category, setCategory] = useState("Highlight");
   const [allPosts, setAllPosts] = useState([]);
+  const [filteredPosts, setFilteredPosts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -66,8 +67,31 @@ export default function Articles() {
   const handleCategoryChange = (value) => {
     if (value !== category) {
       setCategory(value);
+      setCurrentPage(1); // Reset pagination when changing category
     }
   };
+
+  // Filter posts based on category and search query
+  useEffect(() => {
+    let filtered = allPosts;
+
+    // Filter by category
+    if (category !== "Highlight") {
+      filtered = filtered.filter(post => post.category === category);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(post =>
+        post.title.toLowerCase().includes(query) ||
+        post.description.toLowerCase().includes(query)
+      );
+    }
+
+    setFilteredPosts(filtered);
+    setCurrentPage(1); // Reset to first page on filter change
+  }, [category, searchQuery, allPosts]);
 
   const loadMorePosts = useCallback(async () => {
     if (isFetchingMore || !hasMore) return;
@@ -214,9 +238,9 @@ export default function Articles() {
         </div>
 
         {/* Blog Cards Grid */}
-        {allPosts.length > 0 ? (
+        {filteredPosts.length > 0 ? (
           <article className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
-            {allPosts.map((blog) => (
+            {filteredPosts.map((blog) => (
               <BlogCard
                 key={blog.id}
                 id={blog.id}
