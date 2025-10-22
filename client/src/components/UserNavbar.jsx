@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   User,
@@ -18,29 +18,57 @@ const UserNavbar = () => {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userData, setUserData] = useState({
-    name: "User",
-    username: "",
-    avatar: "",
-  });
+  const [userData, setUserData] = useState(null);
+  const dropdownRef = useRef(null);
 
   // ✅ Check if user is admin
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (!user) return;
       try {
+        console.log('🔍 Checking admin status for user:', user.id);
         const { data, error } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .single();
-        if (!error) setIsAdmin(data?.role === "admin");
+        
+        console.log('📊 Admin check result:', { data, error });
+        
+        if (!error && data) {
+          const isAdminUser = data?.role === "admin";
+          console.log('✅ Admin status:', isAdminUser);
+          setIsAdmin(isAdminUser);
+        } else {
+          console.warn('⚠️ Could not fetch admin status:', error?.message);
+          setIsAdmin(false);
+        }
       } catch (err) {
-        console.error("Error checking admin:", err);
+        console.error("❌ Error checking admin:", err);
+        setIsAdmin(false);
       }
     };
     checkAdminStatus();
   }, [user]);
+
+  // ✅ Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   // ✅ Fetch user data + avatar
   useEffect(() => {
@@ -53,23 +81,27 @@ const UserNavbar = () => {
       try {
         const { data } = await supabase
           .from("users")
-          .select("name, username")
+          .select("name, username, avatar_url")
           .eq("id", user.id)
           .maybeSingle();
 
-        let avatarUrl = placeholderAvatar;
-        const { data: avatarData } = await supabase.storage
-          .from("avatars")
-          .list(user.id, {
-            limit: 1,
-            sortBy: { column: "created_at", order: "desc" },
-          });
-
-        if (avatarData?.length > 0) {
-          const { data: urlData } = supabase.storage
+        let avatarUrl = data?.avatar_url || placeholderAvatar;
+        
+        // If no avatar_url from database, try to fetch from storage
+        if (!data?.avatar_url) {
+          const { data: avatarData } = await supabase.storage
             .from("avatars")
-            .getPublicUrl(`${user.id}/${avatarData[0].name}`);
-          avatarUrl = urlData?.publicUrl || placeholderAvatar;
+            .list(user.id, {
+              limit: 1,
+              sortBy: { column: "created_at", order: "desc" },
+            });
+
+          if (avatarData?.length > 0) {
+            const { data: urlData } = supabase.storage
+              .from("avatars")
+              .getPublicUrl(`${user.id}/${avatarData[0].name}`);
+            avatarUrl = urlData?.publicUrl || placeholderAvatar;
+          }
         }
 
         setUserData({
@@ -112,8 +144,8 @@ const UserNavbar = () => {
   };
 
   return (
-    <nav className="bg-[#F9F8F6] border-b border-gray-200">
-      <div className="px-4 sm:px-6 md:px-8 lg:px-12 py-3 sm:py-4">
+    <nav className="sticky top-0 z-40 bg-[#F9F8F6] border-b border-gray-200">
+      <div className="relative px-4 sm:px-6 md:px-8 lg:px-12 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <button
@@ -128,30 +160,31 @@ const UserNavbar = () => {
             {/* ✅ Notification panel replaced */}
             <NotificationsPanel userId={user?.id} />
 
-            {/* Profile dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 hover:opacity-80"
-              >
-                <UserDisplay
-                  user={userData}
-                  showAvatar={true}
-                  showUsername={false}
-                  size="sm"
-                />
-                <svg
-                  className={`w-4 h-4 text-gray-700 transition-transform ${
-                    isDropdownOpen ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
+            {/* Profile dropdown - Only show when data is loaded */}
+            {userData ? (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-2 hover:opacity-80"
                 >
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </button>
+                  <UserDisplay
+                    user={userData}
+                    showAvatar={true}
+                    showUsername={false}
+                    size="sm"
+                  />
+                  <svg
+                    className={`w-4 h-4 text-gray-700 transition-transform ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
 
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-3 w-48 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50">
@@ -187,7 +220,11 @@ const UserNavbar = () => {
                   </button>
                 </div>
               )}
-            </div>
+              </div>
+            ) : (
+              // Show loading state while userData is loading
+              <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+            )}
           </div>
 
           {/* 📱 Mobile */}
@@ -199,8 +236,8 @@ const UserNavbar = () => {
         </div>
 
         {/* 📱 Mobile Dropdown */}
-        {isDropdownOpen && (
-          <div className="md:hidden fixed left-0 right-0 top-[57px] bg-white border-b border-gray-200 shadow-lg z-40">
+        {isDropdownOpen && userData && (
+          <div className="md:hidden absolute left-0 right-0 top-full bg-white border-b border-gray-200 shadow-lg z-50">
             <div className="px-4 py-4 flex items-center gap-3">
               <img
                 src={

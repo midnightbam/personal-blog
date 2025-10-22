@@ -48,18 +48,20 @@ export default function Notification({ setSidebarOpen }) {
   const handleViewNotification = async (notification) => {
     // Mark as read
     if (!notification.is_read) {
-      await notificationService.markAsRead(notification.id);
-      
-      // Update local state
-      setNotifications(prev =>
-        prev.map(n => n.id === notification.id ? { ...n, is_read: true } : n)
-      );
+      try {
+        await notificationService.markAsRead(notification.id);
+        
+        // Update local state
+        setNotifications(prev =>
+          prev.map(n => n.id === notification.id ? { ...n, is_read: true } : n)
+        );
+      } catch (err) {
+        console.error('Error marking notification as read:', err);
+      }
     }
 
-    // Navigate to article
-    if (notification.article_id) {
-      window.location.href = `/article/${notification.article_id}`;
-    }
+    // Don't redirect - just mark as read and stay on the dashboard
+    // Both admins and users just mark as read on this page
   };
 
   const handleMarkAllAsRead = async () => {
@@ -99,15 +101,25 @@ export default function Notification({ setSidebarOpen }) {
   };
 
   const getNotificationMessage = (notification) => {
+    // For comment notifications, the message field contains: "username commented on your article: article_title"
+    // We need to extract just the article title part
+    if (notification.type === 'comment_on_your_article' || notification.type === 'comment_on_article_you_commented') {
+      // Extract article title - it's everything after the last ": "
+      const parts = notification.message.split(': ');
+      const articleTitle = parts[parts.length - 1];
+      
+      if (notification.type === 'comment_on_your_article') {
+        return `${notification.actor_name || notification.commenter_name} commented on your article: ${articleTitle}`;
+      } else {
+        return `${notification.commenter_name} also commented on "${articleTitle}"`;
+      }
+    }
+    
     switch (notification.type) {
       case 'new_article':
         return `New article published: ${notification.message}`;
       case 'like_on_your_article':
-        return `${notification.commenter_name} liked your article: ${notification.message}`;
-      case 'comment_on_your_article':
-        return `${notification.commenter_name} commented on your article`;
-      case 'comment_on_article_you_commented':
-        return `${notification.commenter_name} also commented on "${notification.message}"`;
+        return `${notification.actor_name || notification.commenter_name} liked your article: ${notification.message}`;
       default:
         return notification.message;
     }
@@ -184,44 +196,69 @@ export default function Notification({ setSidebarOpen }) {
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`p-4 md:p-6 flex items-start justify-between gap-4 border-b border-stone-200 last:border-b-0 transition-colors hover:bg-stone-50 ${
-                  !notification.is_read ? 'bg-orange-50' : ''
+                className={`p-3 md:p-4 flex items-start justify-between gap-3 border-b border-stone-200 last:border-b-0 transition-colors cursor-pointer ${
+                  !notification.is_read 
+                    ? 'bg-orange-50 hover:bg-orange-100' 
+                    : 'bg-white hover:bg-stone-50'
                 }`}
+                onClick={() => handleViewNotification(notification)}
               >
-                <div className="flex items-start gap-3 md:gap-4 flex-1 min-w-0">
+                <div className="flex items-start gap-2 md:gap-3 flex-1 min-w-0">
                   {/* Avatar */}
-                  <div className="w-12 h-12 rounded-full bg-stone-200 flex items-center justify-center flex-shrink-0">
-                    <span className="text-base font-medium text-stone-600">
-                      {getUserInitials(notification.commenter_name)}
-                    </span>
+                  <div className="flex-shrink-0">
+                    {notification.actor_avatar || notification.commenter_avatar ? (
+                      <img
+                        src={notification.actor_avatar || notification.commenter_avatar}
+                        alt={notification.commenter_name}
+                        className="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-stone-200 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs md:text-sm font-medium text-stone-600">
+                          {getUserInitials(notification.commenter_name)}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-base md:text-lg text-stone-800 break-words leading-relaxed">
+                    <p className="text-sm md:text-base text-stone-800 break-words leading-relaxed font-medium">
+                      {notification.commenter_name || notification.actor_name}
+                    </p>
+                    <p className="text-xs md:text-sm text-stone-700 break-words leading-relaxed mt-1">
                       {getNotificationMessage(notification)}
                     </p>
                     
-                    <p className="mt-3 text-sm text-stone-500">
+                    {notification.comment_text && (
+                      <p className="text-xs md:text-sm text-stone-600 italic mt-2 p-2 bg-stone-100 rounded border-l-2 border-stone-300 break-words">
+                        &quot;{notification.comment_text}&quot;
+                      </p>
+                    )}
+                    
+                    <p className="mt-2 text-xs text-stone-500">
                       {formatTime(notification.created_at)}
                     </p>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  {!notification.is_read && (
-                    <div className="w-3 h-3 rounded-full bg-orange-400 flex-shrink-0"></div>
-                  )}
+                <div className="flex items-center gap-2 md:gap-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button 
-                    onClick={() => handleViewNotification(notification)}
-                    className="text-sm md:text-base font-medium text-stone-800 underline underline-offset-2 hover:text-stone-600 transition-colors whitespace-nowrap"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewNotification(notification);
+                    }}
+                    className="text-xs md:text-sm font-medium text-stone-800 hover:text-stone-600 transition-colors whitespace-nowrap underline underline-offset-1"
                   >
                     View
                   </button>
                   <button 
-                    onClick={() => handleDeleteNotification(notification.id)}
-                    className="text-sm text-stone-500 hover:text-red-600 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteNotification(notification.id);
+                    }}
+                    className="text-xs text-stone-500 hover:text-red-600 transition-colors"
                     title="Delete notification"
                   >
                     ✕

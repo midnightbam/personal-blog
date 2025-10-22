@@ -84,19 +84,6 @@ const NotificationsPanel = ({ userId, variant = "dropdown" }) => {
   const togglePanel = async (e) => {
     e.stopPropagation();
     setIsOpen((s) => !s);
-    
-    // Mark notifications as read when opening panel
-    if (!isOpen && hasUnread) {
-      try {
-        await notificationService.markAllAsRead(userId);
-        setHasUnread(false);
-        setNotifications(prevNotifications => 
-          prevNotifications.map(n => ({ ...n, is_read: true }))
-        );
-      } catch (err) {
-        console.error("Error marking notifications as read:", err);
-      }
-    }
   };
 
   const getUserInitials = (name) => {
@@ -126,9 +113,27 @@ const NotificationsPanel = ({ userId, variant = "dropdown" }) => {
   const renderNotificationItem = (n) => (
     <li
       key={n.id}
-      className={`p-3 flex gap-3 items-start hover:bg-gray-50 transition-colors ${
-        !n.is_read ? "bg-green-50/60" : ""
+      className={`p-3 flex gap-3 items-start hover:bg-gray-50 transition-colors cursor-pointer ${
+        !n.is_read ? "bg-orange-50" : "bg-white"
       }`}
+      onClick={async () => {
+        if (!n.is_read) {
+          try {
+            await notificationService.markAsRead(n.id);
+            setNotifications(prevNotifications =>
+              prevNotifications.map(notif =>
+                notif.id === n.id ? { ...notif, is_read: true } : notif
+              )
+            );
+            setNotifications(prevNotifications => {
+              setHasUnread(prevNotifications.some(notif => !notif.is_read));
+              return prevNotifications;
+            });
+          } catch (err) {
+            console.error('Error marking notification as read:', err);
+          }
+        }
+      }}
     >
       {/* Avatar */}
       <div className="flex-shrink-0">
@@ -149,8 +154,8 @@ const NotificationsPanel = ({ userId, variant = "dropdown" }) => {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-900">{n.message}</p>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-sm text-gray-900"><span className="font-bold">{n.actor_name || n.commenter_name || 'User'}</span>{n.type === 'comment_on_your_article' && <span className="text-gray-600 font-normal"> commented</span>}{n.type === 'like_on_your_article' && <span className="text-gray-600 font-normal"> liked</span>}</p>
+        <p className="text-xs text-orange-500 font-medium mt-1">
           {formatTime(n.created_at)}
         </p>
       </div>
@@ -174,15 +179,30 @@ const NotificationsPanel = ({ userId, variant = "dropdown" }) => {
 
         {/* Notifications Panel - Dropdown */}
         {isOpen && (
-          <div className="absolute top-full right-0 mt-2 w-80 bg-white shadow-2xl rounded-xl border border-gray-200 z-50 max-h-[70vh] overflow-y-auto">
+          <div className="absolute top-full right-0 mt-2 w-80 bg-white shadow-2xl rounded-lg border border-gray-200 z-50 overflow-hidden">
             {isLoading ? (
               <div className="flex items-center justify-center p-4">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
               </div>
             ) : notifications.length > 0 ? (
-              <ul className="divide-y divide-gray-100">
-                {notifications.map(renderNotificationItem)}
-              </ul>
+              <>
+                <ul className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
+                  {notifications.slice(0, 3).map(renderNotificationItem)}
+                </ul>
+                {notifications.length > 3 && (
+                  <div className="border-t border-gray-100 p-3 text-center">
+                    <button
+                      onClick={() => {
+                        setIsOpen(false);
+                        window.location.href = '/admin/notifications';
+                      }}
+                      className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+                    >
+                      View all notifications ({notifications.length})
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="p-4 text-center text-gray-500 text-sm">
                 No notifications yet
@@ -240,9 +260,23 @@ const NotificationsPanel = ({ userId, variant = "dropdown" }) => {
                 {notifications.map((n) => (
                   <li
                     key={n.id}
-                    className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
-                      !n.is_read ? "bg-orange-50" : ""
+                    className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer border-b last:border-b-0 ${
+                      !n.is_read ? "bg-orange-50 hover:bg-orange-100" : "bg-white hover:bg-gray-50"
                     }`}
+                    onClick={async () => {
+                      if (!n.is_read) {
+                        try {
+                          await notificationService.markAsRead(n.id);
+                          setNotifications(prevNotifications =>
+                            prevNotifications.map(notif =>
+                              notif.id === n.id ? { ...notif, is_read: true } : notif
+                            )
+                          );
+                        } catch (err) {
+                          console.error('Error marking notification as read:', err);
+                        }
+                      }
+                    }}
                   >
                     <div className="flex gap-3 items-start">
                       {/* Avatar */}
@@ -254,8 +288,8 @@ const NotificationsPanel = ({ userId, variant = "dropdown" }) => {
                             className="w-12 h-12 rounded-full object-cover"
                           />
                         ) : (
-                          <div className="w-12 h-12 rounded-full bg-stone-200 flex items-center justify-center">
-                            <span className="text-sm font-medium text-stone-600">
+                          <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-medium text-teal-700">
                               {getUserInitials(n.actor_name || n.commenter_name)}
                             </span>
                           </div>
@@ -263,15 +297,31 @@ const NotificationsPanel = ({ userId, variant = "dropdown" }) => {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-base font-semibold text-gray-900">
-                            {n.actor_name || n.commenter_name || 'User'}
+                        {/* Name + Action */}
+                        <p className="text-base text-gray-900">
+                          <span className="font-bold">{n.actor_name || n.commenter_name || 'User'}</span>
+                          <span className="text-gray-600 font-normal">
+                            {n.type === 'comment_on_your_article' && ' Commented on the article you have commented on.'}
+                            {n.type === 'like_on_your_article' && ' Liked your article.'}
+                            {n.type === 'new_article' && ' Published new article.'}
+                            {n.type === 'comment_on_article_you_commented' && ' Also commented on the article.'}
+                          </span>
+                        </p>
+
+                        {/* Comment text if available */}
+                        {n.comment_text && (
+                          <p className="text-sm text-gray-700 italic mt-2 p-2 bg-gray-100 rounded border-l-2 border-orange-400">
+                            &quot;{n.comment_text}&quot;
                           </p>
-                        </div>
-                        <p className="text-sm text-gray-700 mt-1">
+                        )}
+
+                        {/* Article/Message */}
+                        <p className="text-sm text-gray-600 mt-2">
                           {n.message}
                         </p>
-                        <p className="text-xs text-orange-500 mt-2">
+
+                        {/* Time */}
+                        <p className="text-xs text-orange-500 font-medium mt-2">
                           {formatTime(n.created_at)}
                         </p>
                       </div>

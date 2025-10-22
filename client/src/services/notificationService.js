@@ -145,9 +145,10 @@ export const notificationService = {
    * Create notification when user comments on article
    * Notifies: 1) Article author, 2) Other users who commented on same article
    */
-  async notifyNewComment(articleId, commenterId, commenterName, articleTitle) {
+  async notifyNewComment(articleId, commenterId, commenterName, articleTitle, commentText) {
     try {
       console.log('Creating notifications for new comment by:', commenterName);
+      console.log('Comment text:', commentText);
 
       // Get article author and commenter info
       const [articleResponse, commenterResponse] = await Promise.all([
@@ -186,6 +187,7 @@ export const notificationService = {
           article_id: articleId,
           type: 'comment_on_your_article',
           message: `${commenterName} commented on your article: ${articleTitle}`,
+          comment_text: commentText,
           commenter_id: commenterId,
           commenter_name: commenterName,
           commenter_avatar: commenterAvatar,
@@ -216,6 +218,7 @@ export const notificationService = {
             article_id: articleId,
             type: 'comment_on_article_you_commented',
             message: `${commenterName} also commented on "${articleTitle}"`,
+            comment_text: commentText,
             commenter_id: commenterId,
             commenter_name: commenterName,
             commenter_avatar: commenterAvatar,
