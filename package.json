@@ -2,18 +2,5 @@
   "name": "personal-blog",
   "private": true,
   "version": "0.0.0",
-  "description": "Personal blog with separate client and server",
-  "scripts": {
-    "dev": "concurrently \"npm run dev --workspace=client\" \"npm run dev --workspace=server\"",
-    "client:dev": "cd client && npm run dev",
-    "client:build": "cd client && npm run build",
-    "server:dev": "cd server && npm run dev",
-    "server:start": "cd server && npm start"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.0"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.76.1"
-  }
+  "description": "Personal blog with separate client and server"
 }
