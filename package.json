@@ -4,9 +4,5 @@
   "version": "1.0.0",
   "engines": {
     "node": "20.x"
-  },
-  "scripts": {
-    "build": "cd client && npm install --legacy-peer-deps && npm run build && cd .. && mkdir -p dist && cp -r client/dist/* dist/",
-    "dev": "cd client && npm run dev"
   }
 }
