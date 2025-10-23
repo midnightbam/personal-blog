@@ -1,5 +1,5 @@
 import React from 'react';
-import heroImage from '../assets/super-lua-azul-1024x680.jpg';
+import heroImage from '../assets/Panda-Bamboo_Panda-Quiz_KIDS_1021.avif';
 
 const HeroSection = () => {
   return (
