@@ -1,6 +1,7 @@
 import React from 'react';
 
 const HeroSection = () => {
+  // Panda image from public folder
   const heroImage = '/Panda-Bamboo_Panda-Quiz_KIDS_1021.avif';
   return (
     <section className="bg-gradient-to-b from-white to-gray-50 py-4 sm:py-6 md:py-8 lg:py-6 xl:py-8 flex items-center">
