@@ -246,6 +246,9 @@ export default function Profile({ setSidebarOpen }) {
     }
 
     setIsSaving(true);
+    console.log('💾 Saving profile changes...');
+    const startTime = performance.now();
+
     try {
       const { error } = await supabase
         .from('users')
@@ -267,8 +270,14 @@ export default function Profile({ setSidebarOpen }) {
         return;
       }
 
+      const endTime = performance.now();
+      console.log(`✅ Profile saved in ${(endTime - startTime).toFixed(2)}ms`);
+
       setOriginalUsername(profileData.username);
       toastSuccess('Profile saved', 'Your profile has been successfully updated');
+      
+      // Immediately refresh to ensure sync
+      await fetchUserData();
     } catch (error) {
       console.error('Error saving:', error);
       toastError('Failed to save profile');

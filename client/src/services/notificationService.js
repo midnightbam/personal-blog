@@ -264,6 +264,7 @@ export const notificationService = {
           article_id,
           type,
           message,
+          comment_text,
           actor_id,
           actor_name,
           actor_avatar,

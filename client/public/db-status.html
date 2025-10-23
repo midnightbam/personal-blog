@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Categories & Articles Status</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        pre { background: #f0f0f0; padding: 15px; margin: 10px 0; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Database Status Check</h1>
+    
+    <h2>Categories</h2>
+    <pre id="categories"></pre>
+    <button onclick="loadCategories()">Refresh Categories</button>
+    <button onclick="createDefaultCategories()">Create Default Categories</button>
+    
+    <h2>Articles Count by Status</h2>
+    <pre id="articles"></pre>
+    <button onclick="loadArticles()">Refresh Articles</button>
+    <button onclick="publishAllDrafts()">Publish All Drafts</button>
+    
+    <h2>All Articles</h2>
+    <pre id="allArticles"></pre>
+    <button onclick="loadAllArticles()">Load All Articles</button>
+    
+    <script>
+        const SUPABASE_URL = 'https://ireradbtbwybpvtpihvn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyZXJhZGJ0Ynd5YnB2dHBwaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNDA2MDcsImV4cCI6MjA3NjYxNjYwN30.o_JH5Aw7zhZ-wsC_husELuev6LCqI8gqpa4gz8oenD8';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        async function loadCategories() {
+            const { data, error } = await supabase.from('categories').select('*');
+            document.getElementById('categories').textContent = error 
+                ? `ERROR: ${error.message}`
+                : `Total: ${data?.length || 0}\n${JSON.stringify(data, null, 2)}`;
+        }
+        
+        async function loadArticles() {
+            const { data, error } = await supabase
+                .from('articles')
+                .select('id, title, status', { count: 'exact' });
+            
+            if (error) {
+                document.getElementById('articles').textContent = `ERROR: ${error.message}`;
+                return;
+            }
+            
+            const statusCount = data.reduce((acc, a) => {
+                acc[a.status] = (acc[a.status] || 0) + 1;
+                return acc;
+            }, {});
+            
+            document.getElementById('articles').textContent = JSON.stringify(statusCount, null, 2);
+        }
+        
+        async function loadAllArticles() {
+            const { data, error } = await supabase
+                .from('articles')
+                .select('id, title, status, category');
+            
+            document.getElementById('allArticles').textContent = error 
+                ? `ERROR: ${error.message}`
+                : JSON.stringify(data, null, 2);
+        }
+        
+        async function publishAllDrafts() {
+            const { data, error } = await supabase
+                .from('articles')
+                .update({ status: 'Published' })
+                .eq('status', 'Draft')
+                .select('id, title');
+            
+            if (error) {
+                document.getElementById('articles').textContent = `ERROR: ${error.message}`;
+            } else {
+                document.getElementById('articles').textContent = `✅ Published ${data?.length || 0} articles\n${JSON.stringify(data, null, 2)}`;
+            }
+        }
+        
+        async function createDefaultCategories() {
+            const defaultCategories = [
+                { name: 'Technology' },
+                { name: 'Business' },
+                { name: 'Lifestyle' },
+                { name: 'Travel' }
+            ];
+            
+            const { data, error } = await supabase
+                .from('categories')
+                .insert(defaultCategories)
+                .select();
+            
+            if (error) {
+                document.getElementById('categories').textContent = `ERROR: ${error.message}`;
+            } else {
+                document.getElementById('categories').textContent = `✅ Created ${data?.length || 0} categories\n${JSON.stringify(data, null, 2)}`;
+            }
+        }
+        
+        // Load on page load
+        loadCategories();
+        loadArticles();
+        loadAllArticles();
+    </script>
+</body>
+</html>
