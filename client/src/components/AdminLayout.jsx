@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Folder, User, Bell, Lock, LogOut, X, Link as LinkIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import ArticleManagementSupabase from "./admin/ArticleManagementSupabase";
 import ArticleForm from "./admin/ArticleForm";
 import CategoryManagement from "./admin/CategoryManagement";
@@ -9,6 +11,7 @@ import ResetPassword from "./admin/ResetPassword";
 import Notification from "./admin/Notification";
 
 export default function AdminLayout() {
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('Article management');
   const [currentView, setCurrentView] = useState('list');
   const [editingArticle, setEditingArticle] = useState(null);
@@ -97,8 +100,21 @@ export default function AdminLayout() {
     setItemToDelete(null);
   };
 
-  const handleLogout = () => {
-    window.location.href = '/login';
+  const handleLogout = async () => {
+    try {
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('❌ Logout error:', error);
+        return;
+      }
+      
+      // Redirect to login page
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('❌ Logout failed:', err);
+      window.location.href = '/login';
+    }
   };
 
   const handleGoToWebsite = () => {
