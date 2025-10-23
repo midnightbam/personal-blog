@@ -58,5 +58,5 @@
 
 ## 🌍 Live Demo
 
-👉 [View the live site here](https://personal-blog-client-lilac.vercel.app/)
+👉 [View the live site here](https://personal-blog-git-main-midnightbams-projects.vercel.app/)
 
