@@ -204,7 +204,7 @@ const NotificationsPanel = ({ userId, variant = "dropdown" }) => {
                     <button
                       onClick={() => {
                         setIsOpen(false);
-                        window.location.href = '/admin/notifications';
+                        window.location.href = '/notifications';
                       }}
                       className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
                     >

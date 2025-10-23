@@ -11,6 +11,7 @@ import ProfilePage from './pages/ProfilePage';
 import ViewPostPage from './pages/ViewPostPage';
 import NotFoundPage from './pages/NotFoundPage';
 import CreateAdminPage from './pages/CreateAdminPage';
+import UserNotificationsPage from './pages/UserNotificationsPage';
 import AdminLayout from './components/AdminLayout';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -50,6 +51,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <PublicLayout><ProfilePage /></PublicLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/notifications" 
+            element={
+              <ProtectedRoute>
+                <PublicLayout><UserNotificationsPage /></PublicLayout>
               </ProtectedRoute>
             } 
           />
