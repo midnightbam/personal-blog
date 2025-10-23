@@ -287,7 +287,7 @@ export const notificationService = {
   },
 
   /**
-   * Get notifications for a user with full user data
+   * Get notifications for a user with full user data and fresh actor avatars
    */
   async getUserNotifications(userId, limit = 50) {
     try {
@@ -304,10 +304,8 @@ export const notificationService = {
           comment_text,
           actor_id,
           actor_name,
-          actor_avatar,
           commenter_id,
           commenter_name,
-          commenter_avatar,
           is_read,
           created_at,
           articles (
@@ -324,12 +322,48 @@ export const notificationService = {
         return [];
       }
 
-      console.log(`✅ Got ${data?.length || 0} notifications for user ${userId}`);
-      if (data && data.length > 0) {
-        console.log('📋 First notification:', data[0]);
+      // Fetch fresh actor avatar data for each notification
+      const notificationsWithFreshAvatars = await Promise.all(
+        (data || []).map(async (notification) => {
+          let actor_avatar = null;
+          let commenter_avatar = null;
+
+          // Get fresh actor avatar if actor_id exists
+          if (notification.actor_id) {
+            const { data: actorData } = await supabase
+              .from('users')
+              .select('avatar_url')
+              .eq('id', notification.actor_id)
+              .maybeSingle();
+            
+            actor_avatar = actorData?.avatar_url || null;
+          }
+
+          // Get fresh commenter avatar if commenter_id exists
+          if (notification.commenter_id) {
+            const { data: commenterData } = await supabase
+              .from('users')
+              .select('avatar_url')
+              .eq('id', notification.commenter_id)
+              .maybeSingle();
+            
+            commenter_avatar = commenterData?.avatar_url || null;
+          }
+
+          return {
+            ...notification,
+            actor_avatar,
+            commenter_avatar
+          };
+        })
+      );
+
+      console.log(`✅ Got ${notificationsWithFreshAvatars?.length || 0} notifications for user ${userId}`);
+      if (notificationsWithFreshAvatars && notificationsWithFreshAvatars.length > 0) {
+        console.log('📋 First notification:', notificationsWithFreshAvatars[0]);
       }
 
-      return data || [];
+      return notificationsWithFreshAvatars || [];
     } catch (error) {
       console.error('❌ Exception in getUserNotifications:', error);
       return [];

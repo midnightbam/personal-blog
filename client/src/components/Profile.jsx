@@ -180,16 +180,6 @@ export default function Profile() {
     };
   }, [user, authLoading, fetchUserProfile]);
 
-  const validateUsername = (username) => {
-    if (!username) return "Username is required";
-    if (username.length < 3) return "Username must be at least 3 characters";
-    if (username.length > 30) return "Username must be at most 30 characters";
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      return "Username can only contain letters, numbers, hyphens, and underscores";
-    }
-    return "";
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -269,21 +259,12 @@ export default function Profile() {
       return;
     }
 
-    // Validate username
-    const usernameValidationError = validateUsername(formData.username);
-    if (usernameValidationError) {
-      setUsernameError(usernameValidationError);
-      toastError(usernameValidationError);
-      return;
-    }
-
     try {
       setLoading(true);
       if (!user) throw new Error("No user logged in");
 
       console.log('💾 Saving profile:', {
         name: formData.name,
-        username: formData.username,
         avatar_url: formData.avatar,
         userId: user.id
       });
@@ -505,17 +486,12 @@ export default function Profile() {
                   id="profile-username"
                   name="username"
                   value={formData.username}
-                  onChange={handleChange}
-                  className={`w-full h-10 px-3 border rounded-lg bg-white focus:outline-none text-sm ${
-                    usernameError ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-gray-500'
-                  }`}
-                  placeholder="Enter your username"
+                  disabled
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg bg-gray-100 text-gray-600 text-sm"
+                  placeholder="Loading username..."
                 />
-                {usernameError && (
-                  <p className="text-xs text-red-600">{usernameError}</p>
-                )}
                 <p className="text-xs text-gray-500">
-                  3-30 characters, letters, numbers, hyphens, and underscores only
+                  Your username from signup (cannot be changed)
                 </p>
               </div>
 
