@@ -1,8 +1,6 @@
-{{
-
-  "buildCommand": "npm --prefix client install --legacy-peer-deps && npm --prefix client run build",  "outputDirectory": "dist"
-
-  "outputDirectory": "client/dist",}
+{
+  "buildCommand": "npm --prefix client install --legacy-peer-deps && npm --prefix client run build",
+  "outputDirectory": "client/dist",
   "framework": "vite",
   "installCommand": "npm install"
 }
