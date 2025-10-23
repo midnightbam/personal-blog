@@ -9,6 +9,9 @@ import commentRoute from './routes/commentRoute.js';
 import likeRoute from './routes/likeRoute.js';
 import userRoute from './routes/userRoute.js';
 
+// Import dev controller
+import { publishAllDrafts } from './controllers/devController.js';
+
 dotenv.config();
 
 const app = express();
@@ -35,6 +38,9 @@ app.use('/api/categories', categoryRoute);
 app.use('/api/comments', commentRoute);
 app.use('/api/likes', likeRoute);
 app.use('/api/users', userRoute);
+
+// Development endpoint - publish all draft articles
+app.get('/api/dev/publish-drafts', publishAllDrafts);
 
 // 404 handler
 app.use((req, res) => {

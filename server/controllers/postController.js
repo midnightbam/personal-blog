@@ -10,15 +10,15 @@ export const getAllPosts = async (req, res) => {
 
     let query = supabase
       .from('articles')
-      .select('*, category:category_id(name), author:user_id(name, avatar_url)', { count: 'exact' });
+      .select('*', { count: 'exact' });
 
     if (category) {
-      query = query.eq('category_id', category);
+      query = query.eq('category', category);
     }
 
     const { data, error, count } = await query
       .eq('status', 'Published')
-      .order('created_at', { ascending: false })
+      .order('date', { ascending: false })
       .range((page - 1) * limit, page * limit - 1);
 
     if (error) throw error;
@@ -51,7 +51,7 @@ export const getPostById = async (req, res) => {
 
     const { data, error } = await supabase
       .from('articles')
-      .select('*, category:category_id(name), author:user_id(name, avatar_url, email)')
+      .select('*')
       .eq('id', id)
       .eq('status', 'Published')
       .single();
