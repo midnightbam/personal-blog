@@ -1,0 +1,35 @@
+{{
+
+  "name": "personal-blog",  "name": "personal-blog",
+
+  "version": "1.0.0",  "private": true,
+
+  "description": "Full-stack personal blogging platform with React frontend and Express backend",  "version": "1.0.0",
+
+  "private": true,  "engines": {
+
+  "scripts": {    "node": "20.x"
+
+    "dev": "concurrently \"npm --prefix client run dev\" \"npm --prefix server run dev\"",  },
+
+    "build": "npm --prefix client run build && npm --prefix server install",  "scripts": {
+
+    "start": "npm --prefix server start",    "build": "npm --prefix client install --legacy-peer-deps && npm --prefix client run build && npm run build:copy",
+
+    "test": "echo \"Error: no test specified\" && exit 1"    "build:copy": "node -e \"const fs = require('fs'); const path = require('path'); const src = 'client/dist'; const dst = 'dist'; if(fs.existsSync(dst)) fs.rmSync(dst, {recursive: true, force: true}); function copyDir(s,d) { fs.mkdirSync(d, {recursive:true}); fs.readdirSync(s).forEach(f => { const sp = path.join(s,f); const dp = path.join(d,f); fs.statSync(sp).isDirectory() ? copyDir(sp, dp) : fs.copyFileSync(sp, dp); }); } copyDir(src, dst);\"",
+
+  },    "dev": "npm --prefix client run dev"
+
+  "keywords": [  }
+
+    "blog",}
+    "react",
+    "express",
+    "supabase"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
