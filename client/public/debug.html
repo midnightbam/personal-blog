@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Debug</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+        .section { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Database Debugging</h1>
+    
+    <div class="section">
+        <h2>All Articles (Any Status)</h2>
+        <pre id="all-articles">Loading...</pre>
+    </div>
+
+    <div class="section">
+        <h2>Direct Supabase Query (Published Only)</h2>
+        <pre id="supabase-result">Loading...</pre>
+    </div>
+
+    <div class="section">
+        <h2>API Server Query</h2>
+        <pre id="api-result">Loading...</pre>
+    </div>
+
+    <div class="section">
+        <h2>Publish Draft Articles</h2>
+        <button onclick="publishArticles()">Click to publish all draft articles (from Supabase client)</button>
+        <pre id="publish-result"></pre>
+    </div>
+
+    <div class="section">
+        <h2>Publish via API Dev Endpoint</h2>
+        <button onclick="publishViaAPI()">Click to publish all draft articles (via API)</button>
+        <pre id="publish-api-result"></pre>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://ireradbtbwybpvtpihvn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyZXJhZGJ0Ynd5YnB2dHBwaHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNDA2MDcsImV4cCI6MjA3NjYxNjYwN30.o_JH5Aw7zhZ-wsC_husELuev6LCqI8gqpa4gz8oenD8';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Test 1: All articles
+        (async () => {
+            try {
+                const { data, error, count } = await supabase
+                    .from('articles')
+                    .select('id, title, status, date, category', { count: 'exact' });
+
+                if (error) throw error;
+
+                document.getElementById('all-articles').innerText = 
+                    `Total: ${count}\nStatuses: ${[...new Set(data.map(d => d.status))].join(', ')}\n\n${JSON.stringify(data, null, 2)}`;
+            } catch (err) {
+                document.getElementById('all-articles').innerText = `ERROR: ${err.message}`;
+            }
+        })();
+
+        // Test 2: Published only
+        (async () => {
+            try {
+                const { data, error, count } = await supabase
+                    .from('articles')
+                    .select('id, title, status, date, category', { count: 'exact' })
+                    .eq('status', 'Published');
+
+                if (error) throw error;
+
+                document.getElementById('supabase-result').innerText = 
+                    `Total: ${count}\n\n${JSON.stringify(data, null, 2)}`;
+            } catch (err) {
+                document.getElementById('supabase-result').innerText = `ERROR: ${err.message}`;
+            }
+        })();
+
+        // Test 3: API Server
+        (async () => {
+            try {
+                const res = await fetch('http://localhost:3000/api/posts');
+                const json = await res.json();
+                document.getElementById('api-result').innerText = JSON.stringify(json, null, 2);
+            } catch (err) {
+                document.getElementById('api-result').innerText = `ERROR: ${err.message}`;
+            }
+        })();
+
+        // Publish draft articles
+        window.publishArticles = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('articles')
+                    .update({ status: 'Published' })
+                    .eq('status', 'Draft');
+                
+                if (error) {
+                    document.getElementById('publish-result').innerText = `ERROR: ${error.message}`;
+                } else {
+                    document.getElementById('publish-result').innerText = `✅ Published ${data?.length || 0} articles\n\nRefresh the page to see updated results`;
+                }
+            } catch (err) {
+                document.getElementById('publish-result').innerText = `ERROR: ${err.message}`;
+            }
+        };
+
+        // Publish via API
+        window.publishViaAPI = async () => {
+            try {
+                const res = await fetch('http://localhost:3000/api/dev/publish-drafts');
+                const json = await res.json();
+                document.getElementById('publish-api-result').innerText = JSON.stringify(json, null, 2);
+            } catch (err) {
+                document.getElementById('publish-api-result').innerText = `ERROR: ${err.message}`;
+            }
+        };
+    </script>
+</body>
+</html>
