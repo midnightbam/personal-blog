@@ -68,9 +68,38 @@ const NotificationsPanel = ({ userId, variant = "dropdown" }) => {
           table: 'notifications',
           filter: `user_id=eq.${userId}`
         },
-        (payload) => {
+        async (payload) => {
           console.log('🔔 New notification received:', payload);
-          setNotifications(current => [payload.new, ...current]);
+          
+          // Fetch fresh avatar for the new notification
+          let actor_avatar = null;
+          let commenter_avatar = null;
+          
+          if (payload.new.actor_id) {
+            const { data: actorData } = await supabase
+              .from('users')
+              .select('avatar_url')
+              .eq('id', payload.new.actor_id)
+              .maybeSingle();
+            actor_avatar = actorData?.avatar_url || null;
+          }
+          
+          if (payload.new.commenter_id) {
+            const { data: commenterData } = await supabase
+              .from('users')
+              .select('avatar_url')
+              .eq('id', payload.new.commenter_id)
+              .maybeSingle();
+            commenter_avatar = commenterData?.avatar_url || null;
+          }
+          
+          const notificationWithAvatar = {
+            ...payload.new,
+            actor_avatar,
+            commenter_avatar
+          };
+          
+          setNotifications(current => [notificationWithAvatar, ...current]);
           setHasUnread(true);
         }
       )
