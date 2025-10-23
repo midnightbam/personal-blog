@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, Loader2, RotateCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { notificationService } from '../../services/notificationService';
 
 export default function Notification({ setSidebarOpen }) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [allNotifications, setAllNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,8 +82,10 @@ export default function Notification({ setSidebarOpen }) {
       }
     }
 
-    // Don't redirect - just mark as read and stay on the dashboard
-    // Both admins and users just mark as read on this page
+    // Redirect to the article page
+    if (notification.article_id) {
+      navigate(`/post/${notification.article_id}`);
+    }
   };
 
   const handleMarkAllAsRead = async () => {

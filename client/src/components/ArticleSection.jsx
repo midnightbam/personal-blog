@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,8 +22,6 @@ export default function Articles() {
   // Constants for pagination
   const ITEMS_PER_PAGE = 6;
   const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
 
   // Fetch categories and initial articles
   useEffect(() => {
@@ -69,8 +67,7 @@ export default function Articles() {
           .from('articles')
           .select('*', { count: 'exact' })
           .eq('status', 'Published')
-          .order('date', { ascending: false })
-          .limit(ITEMS_PER_PAGE);
+          .order('date', { ascending: false });
 
         // If no published articles, publish drafts and fetch again
         if (!articlesResponse.error && (!articlesResponse.data || articlesResponse.data.length === 0)) {
@@ -88,8 +85,7 @@ export default function Articles() {
               .from('articles')
               .select('*', { count: 'exact' })
               .eq('status', 'Published')
-              .order('date', { ascending: false })
-              .limit(ITEMS_PER_PAGE);
+              .order('date', { ascending: false });
           }
         }
 
@@ -98,34 +94,30 @@ export default function Articles() {
 
         if (articlesResponse.error) throw articlesResponse.error;
 
+        // Fetch user data for each article
+        const articlesWithAuthor = await Promise.all(
+          (articlesResponse.data || []).map(async (article) => {
+            if (article.user_id) {
+              const { data: userData } = await supabase
+                .from('users')
+                .select('id, name, avatar_url')
+                .eq('id', article.user_id)
+                .single();
+              
+              return {
+                ...article,
+                author: userData || null
+              };
+            }
+            return article;
+          })
+        );
+
         const categoryNames = categoriesData?.map(cat => cat.name) || [];
         const finalCategories = ["Highlight", ...categoryNames];
         setAllCategories(finalCategories);
 
-        // Fetch author info for each article
-        const articlesWithAuthors = await Promise.all(
-          (articlesResponse.data || []).map(async (article) => {
-            if (article.user_id) {
-              const { data: authorData } = await supabase
-                .from('users')
-                .select('name, avatar_url')
-                .eq('id', article.user_id)
-                .maybeSingle();
-              
-              return {
-                ...article,
-                author: authorData || { name: 'Anonymous', avatar_url: null }
-              };
-            }
-            return {
-              ...article,
-              author: { name: 'Anonymous', avatar_url: null }
-            };
-          })
-        );
-
-        setAllPosts(articlesWithAuthors || []);
-        setHasMore((articlesWithAuthors || []).length === ITEMS_PER_PAGE);
+        setAllPosts(articlesWithAuthor || []);
       } catch (error) {
         console.error('Error fetching data:', error);
         setAllPosts([]);
@@ -151,7 +143,10 @@ export default function Articles() {
 
     // Filter by category
     if (category !== "Highlight") {
-      filtered = filtered.filter(post => post.category === category);
+      filtered = filtered.filter(post => {
+        // Check both 'category' and 'type' fields
+        return post.category === category || post.type === category;
+      });
     }
 
     // Filter by search query
@@ -167,85 +162,8 @@ export default function Articles() {
     setCurrentPage(1); // Reset to first page on filter change
   }, [category, searchQuery, allPosts]);
 
-  const loadMorePosts = useCallback(async () => {
-    if (isFetchingMore || !hasMore) return;
-
-    try {
-      setIsFetchingMore(true);
-      const from = currentPage * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-
-      const query = supabase
-        .from('articles')
-        .select('*')
-        .eq('status', 'Published')
-        .order('date', { ascending: false })
-        .range(from, to);
-
-      if (category !== "Highlight") {
-        query.eq('category', category);
-      }
-
-      if (searchQuery.trim()) {
-        query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      if (data) {
-        // Fetch author info for each new article
-        const dataWithAuthors = await Promise.all(
-          data.map(async (article) => {
-            if (article.user_id) {
-              const { data: authorData } = await supabase
-                .from('users')
-                .select('name, avatar_url')
-                .eq('id', article.user_id)
-                .maybeSingle();
-              
-              return {
-                ...article,
-                author: authorData || { name: 'Anonymous', avatar_url: null }
-              };
-            }
-            return {
-              ...article,
-              author: { name: 'Anonymous', avatar_url: null }
-            };
-          })
-        );
-
-        setAllPosts(prev => [...prev, ...dataWithAuthors]);
-        setHasMore(dataWithAuthors.length === ITEMS_PER_PAGE);
-        setCurrentPage(prev => prev + 1);
-      }
-    } catch (error) {
-      console.error('Error loading more posts:', error);
-    } finally {
-      setIsFetchingMore(false);
-    }
-  }, [category, searchQuery, currentPage, hasMore, isFetchingMore]);
-
-  // Intersection Observer for infinite scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !isFetchingMore && hasMore) {
-          loadMorePosts();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    const loadMoreTrigger = document.getElementById('load-more-trigger');
-    if (loadMoreTrigger) {
-      observer.observe(loadMoreTrigger);
-    }
-
-    return () => observer.disconnect();
-  }, [hasMore, isFetchingMore, loadMorePosts]);
+  // Remove the loadMorePosts and useEffect for intersection observer
+  // since we're using client-side pagination now
 
   if (isLoading) {
     return (
@@ -339,39 +257,39 @@ export default function Articles() {
 
         {/* Blog Cards Grid */}
         {filteredPosts.length > 0 ? (
-          <article className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
-            {filteredPosts.map((blog) => (
-              <BlogCard
-                key={blog.id}
-                id={blog.id}
-                image={blog.thumbnail}
-                category={blog.category}
-                title={blog.title}
-                description={blog.description}
-                author={blog.author?.name || blog.author_name || 'Anonymous'}
-                authorAvatar={blog.author?.avatar_url}
-                date={new Date(blog.date).toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
-              />
-            ))}
-            
-            {/* Infinite Scroll Trigger */}
-            {hasMore && (
-              <div
-                id="load-more-trigger"
-                className="col-span-full flex justify-center p-4"
-              >
-                {isFetchingMore ? (
-                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                ) : (
-                  <div className="h-10" aria-hidden="true" />
-                )}
+          <>
+            <article className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
+              {filteredPosts.slice(0, ITEMS_PER_PAGE * currentPage).map((blog) => (
+                <BlogCard
+                  key={blog.id}
+                  id={blog.id}
+                  image={blog.thumbnail}
+                  category={blog.category}
+                  title={blog.title}
+                  description={blog.description}
+                  author={blog.author?.name || blog.author_name || 'Anonymous'}
+                  authorAvatar={blog.author?.avatar_url}
+                  date={new Date(blog.date).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                />
+              ))}
+            </article>
+
+            {/* View More Button */}
+            {filteredPosts.length > ITEMS_PER_PAGE * currentPage && (
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  className="px-8 py-3 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  View More
+                </button>
               </div>
             )}
-          </article>
+          </>
         ) : (
           <div className="text-center py-12">
             <p className="text-gray-600">No articles found.</p>

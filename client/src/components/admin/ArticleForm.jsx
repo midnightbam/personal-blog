@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast as sonnerToast } from "sonner";
 import { imageUploadService } from '@/services/imageUploadService';
+import { notificationService } from '@/services/notificationService';
 import { supabase } from '@/lib/supabase';
 
 const toastSuccess = (message, description = "") => {
@@ -279,7 +280,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
       };
 
       if (mode === 'create') {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('articles')
           .insert([{
             title: articleToSave.title,
@@ -291,7 +292,8 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
             user_id: articleToSave.user_id,
             status: articleToSave.status,
             date: new Date().toISOString()
-          }]);
+          }])
+          .select('id');
 
         if (error) {
           console.error("Error creating article:", error);
@@ -301,6 +303,22 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
         }
 
         console.log("Article published");
+
+        // Send notification to admin about new article
+        if (data && data.length > 0) {
+          const newArticleId = data[0].id;
+          try {
+            await notificationService.notifyNewArticle(
+              newArticleId,
+              articleToSave.title,
+              user.id,
+              articleToSave.authorName
+            );
+          } catch (notificationError) {
+            console.error("Error sending notification:", notificationError);
+            // Don't fail the article creation if notification fails
+          }
+        }
       } else {
         const { error } = await supabase
           .from('articles')

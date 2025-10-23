@@ -14,7 +14,6 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 
 export default function ArticleManagementSupabase({ 
-  sidebarOpen, 
   setSidebarOpen, 
   onCreateClick, 
   onEditClick 
@@ -29,7 +28,7 @@ export default function ArticleManagementSupabase({
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]);
   
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
   // Fetch articles and categories
   useEffect(() => {
@@ -64,6 +63,27 @@ export default function ArticleManagementSupabase({
     };
 
     fetchData();
+
+    // Subscribe to real-time changes in articles table
+    const subscription = supabase
+      .channel('articles_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'articles' }, (payload) => {
+        console.log('Article change detected:', payload);
+        if (payload.eventType === 'INSERT') {
+          setArticles((prev) => [payload.new, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setArticles((prev) =>
+            prev.map((art) => (art.id === payload.new.id ? payload.new : art))
+          );
+        } else if (payload.eventType === 'DELETE') {
+          setArticles((prev) => prev.filter((art) => art.id !== payload.old.id));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const filteredArticles = articles.filter((article) => {
