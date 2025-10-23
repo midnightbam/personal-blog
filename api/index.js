@@ -28,6 +28,15 @@ app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Content Security Policy header
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://supabaseapi.supabase.co https://fonts.googleapis.com; frame-ancestors 'none'"
+  );
+  next();
+});
+
 // Helper to check Supabase
 const checkSupabase = (res) => {
   if (!supabase) {
