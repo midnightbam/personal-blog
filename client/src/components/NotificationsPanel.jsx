@@ -158,9 +158,10 @@ const NotificationsPanel = ({ userId, variant = "dropdown" }) => {
           <span className="font-bold">{n.actor_name || n.commenter_name || 'User'}</span>
           {n.type === 'comment_on_your_article' && <span className="text-gray-600 font-normal"> commented on</span>}
           {n.type === 'like_on_your_article' && <span className="text-gray-600 font-normal"> liked</span>}
+          {n.type === 'like_on_article_you_liked' && <span className="text-gray-600 font-normal"> also liked</span>}
           {n.type === 'new_article' && <span className="text-gray-600 font-normal"> published a new article</span>}
           {n.type === 'comment_on_article_you_commented' && <span className="text-gray-600 font-normal"> commented on the article you have commented on</span>}
-          {(n.type === 'comment_on_your_article' || n.type === 'like_on_your_article') && n.articles && <span className="text-gray-900 font-semibold"> &quot;{n.articles.title}&quot;</span>}
+          {(n.type === 'comment_on_your_article' || n.type === 'like_on_your_article' || n.type === 'like_on_article_you_liked') && n.articles && <span className="text-gray-900 font-semibold"> &quot;{n.articles.title}&quot;</span>}
           {n.type === 'new_article' && n.articles && <span className="text-gray-900 font-semibold"> &quot;{n.articles.title}&quot;</span>}
           {n.type === 'comment_on_article_you_commented' && n.articles && <span className="text-gray-900 font-semibold"> &quot;{n.articles.title}&quot;</span>}
         </p>

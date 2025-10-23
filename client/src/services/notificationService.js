@@ -79,7 +79,7 @@ export const notificationService = {
 
   /**
    * Create notification when user likes an article
-   * Notifies: Article author
+   * Notifies: 1) Article author, 2) Other users who liked the same article
    */
   async notifyNewLike(articleId, likerId, likerName, articleTitle) {
     try {
@@ -110,30 +110,67 @@ export const notificationService = {
 
       const article = articleResponse.data;
       const likerAvatar = likerResponse.data?.avatar_url || null;
+      const notifications = [];
 
       console.log('🖼️  Liker avatar URL:', likerAvatar);
       console.log('📊 Liker data:', likerResponse.data);
 
-      // Only notify if the liker is not the author
+      // 1. Notify article author if the liker is not the author
       if (article.user_id && article.user_id !== likerId) {
-        const { error: insertError } = await supabase
-          .from('notifications')
-          .insert([{
-            user_id: article.user_id,
+        notifications.push({
+          user_id: article.user_id,
+          article_id: articleId,
+          type: 'like_on_your_article',
+          message: `${likerName} liked your article: ${articleTitle}`,
+          actor_id: likerId,
+          actor_name: likerName,
+          actor_avatar: likerAvatar,
+          is_read: false,
+          created_at: new Date().toISOString()
+        });
+      }
+
+      // 2. Get all users who have liked this article (except current liker and author)
+      const { data: previousLikers, error: likersError } = await supabase
+        .from('likes')
+        .select('user_id')
+        .eq('article_id', articleId)
+        .neq('user_id', likerId);
+
+      if (!likersError && previousLikers) {
+        // Get unique user IDs (excluding the article author if already added)
+        const uniqueLikers = [...new Set(
+          previousLikers
+            .map(l => l.user_id)
+            .filter(id => id !== article.user_id)
+        )];
+
+        // Create notifications for other users who liked the same article
+        uniqueLikers.forEach(userId => {
+          notifications.push({
+            user_id: userId,
             article_id: articleId,
-            type: 'like_on_your_article',
-            message: `${likerName} liked your article: ${articleTitle}`,
+            type: 'like_on_article_you_liked',
+            message: `${likerName} also liked "${articleTitle}"`,
             actor_id: likerId,
             actor_name: likerName,
             actor_avatar: likerAvatar,
             is_read: false,
             created_at: new Date().toISOString()
-          }]);
+          });
+        });
+      }
+
+      // Insert all notifications
+      if (notifications.length > 0) {
+        const { error: insertError } = await supabase
+          .from('notifications')
+          .insert(notifications);
 
         if (insertError) {
           console.error('Error creating like notification:', insertError);
         } else {
-          console.log('Created notification for new like');
+          console.log(`Created ${notifications.length} notifications for new like`);
         }
       }
     } catch (error) {
