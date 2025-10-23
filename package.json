@@ -1,5 +1,13 @@
 ﻿{
   "name": "personal-blog",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix client run dev",
+    "build": "npm --prefix client install --legacy-peer-deps && npm --prefix client run build && npm --prefix server install",
+    "start": "npm --prefix server start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
 }

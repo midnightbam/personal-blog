@@ -233,7 +233,7 @@ export default function AdminLayout() {
             className="w-full flex items-center gap-3 px-5 py-3 text-sm text-stone-600 hover:bg-stone-400 hover:text-stone-800 transition-all duration-200"
           >
             <LinkIcon className="w-4 h-4" strokeWidth={1.5} />
-            <span>hh. website</span>
+            <span>Bamboo. website</span>
           </button>
           <button 
             onClick={handleLogout}

@@ -205,7 +205,7 @@ const UserNavbar = () => {
             onClick={() => navigate("/")}
             className="text-xl sm:text-2xl font-bold text-gray-900 hover:opacity-80"
           >
-            hh<span className="text-[#12B279]">.</span>
+            Bamboo<span className="text-[#12B279]">.</span>
           </button>
 
           {/* 🖥️ Desktop */}
