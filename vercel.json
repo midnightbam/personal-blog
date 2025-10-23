@@ -2,5 +2,17 @@
   "buildCommand": "npm --prefix client install --legacy-peer-deps && npm --prefix client run build",
   "outputDirectory": "client/dist",
   "framework": "vite",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "functions": {
+    "server/index.js": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/server/index.js"
+    }
+  ]
 }
