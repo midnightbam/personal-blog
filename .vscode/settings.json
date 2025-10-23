@@ -1,0 +1,10 @@
+{
+  "eslint.validate": ["javascript", "javascriptreact"],
+  "eslint.ignorePath": ".gitignore",
+  "files.exclude": {
+    "**/dist": true
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+}
