@@ -109,10 +109,19 @@ export default function AdminLayout() {
         return;
       }
       
+      // Clear any local storage session data
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('sb-auth-token');
+      
       // Redirect to login page
       navigate('/login', { replace: true });
     } catch (err) {
       console.error('❌ Logout failed:', err);
+      // Force redirect even if there's an error
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('sb-auth-token');
       window.location.href = '/login';
     }
   };

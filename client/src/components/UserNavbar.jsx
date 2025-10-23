@@ -177,8 +177,21 @@ const UserNavbar = () => {
 
   // ✅ Logout handler
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/", { replace: true });
+    try {
+      await supabase.auth.signOut();
+      // Clear any local storage session data
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('sb-auth-token');
+      navigate("/", { replace: true });
+    } catch (err) {
+      console.error('Logout error:', err);
+      // Force redirect even if there's an error
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('sb-auth-token');
+      window.location.href = '/';
+    }
   };
 
   const handleProfileClick = () => {

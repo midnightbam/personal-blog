@@ -121,25 +121,18 @@ export default function Notification({ setSidebarOpen }) {
   };
 
   const getNotificationMessage = (notification) => {
-    // For comment notifications, the message field contains: "username commented on your article: article_title"
-    // We need to extract just the article title part
-    if (notification.type === 'comment_on_your_article' || notification.type === 'comment_on_article_you_commented') {
-      // Extract article title - it's everything after the last ": "
-      const parts = notification.message.split(': ');
-      const articleTitle = parts[parts.length - 1];
-      
-      if (notification.type === 'comment_on_your_article') {
-        return `${notification.actor_name || notification.commenter_name} commented on your article: ${articleTitle}`;
-      } else {
-        return `${notification.commenter_name} also commented on "${articleTitle}"`;
-      }
-    }
+    // Use the articles relationship if available
+    const articleTitle = notification.articles?.title || 'Article';
     
     switch (notification.type) {
       case 'new_article':
-        return `New article published: ${notification.message}`;
+        return `New article published: ${articleTitle}`;
       case 'like_on_your_article':
-        return `${notification.actor_name || notification.commenter_name} liked your article: ${notification.message}`;
+        return `${notification.actor_name} liked your article: ${articleTitle}`;
+      case 'comment_on_your_article':
+        return `${notification.commenter_name} commented on your article: ${articleTitle}`;
+      case 'comment_on_article_you_commented':
+        return `${notification.commenter_name} also commented on &quot;${articleTitle}&quot;`;
       default:
         return notification.message;
     }

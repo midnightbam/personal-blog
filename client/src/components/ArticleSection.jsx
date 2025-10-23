@@ -67,10 +67,10 @@ export default function Articles() {
         // Fetch articles - try Published first, then fallback to all
         let articlesResponse = await supabase
           .from('articles')
-          .select('*, author:user_id(name, avatar_url)', { count: 'exact' })
+          .select('*', { count: 'exact' })
           .eq('status', 'Published')
           .order('date', { ascending: false })
-          .range(0, ITEMS_PER_PAGE - 1);
+          .limit(ITEMS_PER_PAGE);
 
         // If no published articles, publish drafts and fetch again
         if (!articlesResponse.error && (!articlesResponse.data || articlesResponse.data.length === 0)) {
@@ -86,10 +86,10 @@ export default function Articles() {
             // Fetch articles again
             articlesResponse = await supabase
               .from('articles')
-              .select('*, author:user_id(name, avatar_url)', { count: 'exact' })
+              .select('*', { count: 'exact' })
               .eq('status', 'Published')
               .order('date', { ascending: false })
-              .range(0, ITEMS_PER_PAGE - 1);
+              .limit(ITEMS_PER_PAGE);
           }
         }
 
@@ -102,8 +102,30 @@ export default function Articles() {
         const finalCategories = ["Highlight", ...categoryNames];
         setAllCategories(finalCategories);
 
-        setAllPosts(articlesResponse.data || []);
-        setHasMore((articlesResponse.data || []).length === ITEMS_PER_PAGE);
+        // Fetch author info for each article
+        const articlesWithAuthors = await Promise.all(
+          (articlesResponse.data || []).map(async (article) => {
+            if (article.user_id) {
+              const { data: authorData } = await supabase
+                .from('users')
+                .select('name, avatar_url')
+                .eq('id', article.user_id)
+                .maybeSingle();
+              
+              return {
+                ...article,
+                author: authorData || { name: 'Anonymous', avatar_url: null }
+              };
+            }
+            return {
+              ...article,
+              author: { name: 'Anonymous', avatar_url: null }
+            };
+          })
+        );
+
+        setAllPosts(articlesWithAuthors || []);
+        setHasMore((articlesWithAuthors || []).length === ITEMS_PER_PAGE);
       } catch (error) {
         console.error('Error fetching data:', error);
         setAllPosts([]);
@@ -155,7 +177,7 @@ export default function Articles() {
 
       const query = supabase
         .from('articles')
-        .select('*, author:user_id(name, avatar_url)')
+        .select('*')
         .eq('status', 'Published')
         .order('date', { ascending: false })
         .range(from, to);
@@ -173,8 +195,30 @@ export default function Articles() {
       if (error) throw error;
 
       if (data) {
-        setAllPosts(prev => [...prev, ...data]);
-        setHasMore(data.length === ITEMS_PER_PAGE);
+        // Fetch author info for each new article
+        const dataWithAuthors = await Promise.all(
+          data.map(async (article) => {
+            if (article.user_id) {
+              const { data: authorData } = await supabase
+                .from('users')
+                .select('name, avatar_url')
+                .eq('id', article.user_id)
+                .maybeSingle();
+              
+              return {
+                ...article,
+                author: authorData || { name: 'Anonymous', avatar_url: null }
+              };
+            }
+            return {
+              ...article,
+              author: { name: 'Anonymous', avatar_url: null }
+            };
+          })
+        );
+
+        setAllPosts(prev => [...prev, ...dataWithAuthors]);
+        setHasMore(dataWithAuthors.length === ITEMS_PER_PAGE);
         setCurrentPage(prev => prev + 1);
       }
     } catch (error) {

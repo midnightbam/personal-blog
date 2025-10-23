@@ -154,7 +154,12 @@ const NotificationsPanel = ({ userId, variant = "dropdown" }) => {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-900"><span className="font-bold">{n.actor_name || n.commenter_name || 'User'}</span>{n.type === 'comment_on_your_article' && <span className="text-gray-600 font-normal"> commented</span>}{n.type === 'like_on_your_article' && <span className="text-gray-600 font-normal"> liked</span>}</p>
+        <p className="text-sm text-gray-900">
+          <span className="font-bold">{n.actor_name || n.commenter_name || 'User'}</span>
+          {n.type === 'comment_on_your_article' && <span className="text-gray-600 font-normal"> commented on</span>}
+          {n.type === 'like_on_your_article' && <span className="text-gray-600 font-normal"> liked</span>}
+          {n.articles && <span className="text-gray-900 font-semibold"> &quot;{n.articles.title}&quot;</span>}
+        </p>
         <p className="text-xs text-orange-500 font-medium mt-1">
           {formatTime(n.created_at)}
         </p>
