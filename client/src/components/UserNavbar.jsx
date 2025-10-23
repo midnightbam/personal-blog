@@ -20,6 +20,7 @@ const UserNavbar = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userData, setUserData] = useState(null);
   const dropdownRef = useRef(null);
+  const mobileMenuRef = useRef(null);
 
   // ✅ Check if user is admin
   useEffect(() => {
@@ -54,8 +55,23 @@ const UserNavbar = () => {
   // ✅ Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      const isMobile = window.innerWidth < 768;
+      
+      if (isMobile) {
+        // Don't close if clicking on any button
+        if (event.target.closest('button')) {
+          return;
+        }
+        // Don't close if clicking inside the dropdown menu
+        if (event.target.closest('[class*="shadow-lg"]')) {
+          return;
+        }
         setIsDropdownOpen(false);
+      } else {
+        // Desktop: use dropdownRef
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+          setIsDropdownOpen(false);
+        }
       }
     };
 
@@ -120,6 +136,43 @@ const UserNavbar = () => {
     };
 
     fetchUserData();
+
+    // ✅ Set up real-time subscription for profile updates
+    if (user?.id) {
+      console.log('🔔 Setting up real-time subscription for navbar user:', user.id);
+      
+      const channel = supabase
+        .channel(`navbar-profile-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'users',
+            filter: `id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('🔄 Navbar: Profile updated in real-time:', payload.new);
+            
+            // Update avatar immediately if it changed
+            const newAvatarUrl = payload.new.avatar_url;
+            if (newAvatarUrl) {
+              setUserData(prev => ({
+                ...prev,
+                avatar: newAvatarUrl,
+                name: payload.new.name || prev.name,
+                username: payload.new.username || prev.username,
+              }));
+              console.log('✅ Navbar avatar updated to:', newAvatarUrl);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user]);
 
   // ✅ Logout handler
@@ -228,7 +281,7 @@ const UserNavbar = () => {
           </div>
 
           {/* 📱 Mobile */}
-          <div className="md:hidden flex items-center gap-4">
+          <div className="md:hidden flex items-center gap-4" ref={mobileMenuRef}>
             <button onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
               <Menu className="w-6 h-6 text-gray-900" />
             </button>
@@ -237,27 +290,30 @@ const UserNavbar = () => {
 
         {/* 📱 Mobile Dropdown */}
         {isDropdownOpen && userData && (
-          <div className="md:hidden absolute left-0 right-0 top-full bg-white border-b border-gray-200 shadow-lg z-50">
-            <div className="px-4 py-4 flex items-center gap-3">
+          <div 
+            className="md:hidden absolute left-0 right-0 top-full bg-white border-b border-gray-200 shadow-lg z-50"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-5 flex items-center gap-4">
               <img
                 src={
                   userData.avatar ||
                   `https://ui-avatars.com/api/?name=${userData.name?.charAt(0)}&background=12B279&color=fff&size=200`
                 }
                 alt={userData.name}
-                className="w-10 h-10 rounded-full object-cover"
+                className="w-12 h-12 rounded-full object-cover flex-shrink-0"
               />
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900">
                   {userData.name}
                 </p>
                 {userData.username && (
-                  <p className="text-xs text-gray-500">@{userData.username}</p>
+                  <p className="text-xs text-gray-500 truncate">@{userData.username}</p>
                 )}
               </div>
 
-              {/* ✅ Reuse Notification Panel inside mobile */}
-              <NotificationsPanel userId={user?.id} />
+              {/* ✅ Notification Panel - Dropdown variant */}
+              <NotificationsPanel userId={user?.id} variant="dropdown" />
             </div>
 
             <hr className="border-gray-200" />

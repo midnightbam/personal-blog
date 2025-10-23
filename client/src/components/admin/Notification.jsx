@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Loader2 } from 'lucide-react';
+import { Menu, Loader2, RotateCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { notificationService } from '../../services/notificationService';
 
@@ -8,42 +8,59 @@ export default function Notification({ setSidebarOpen }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Fetch notifications from database
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      if (!user?.id) return;
+  const fetchNotifications = async (silent = false) => {
+    if (!user?.id) return;
 
-      try {
-        setLoading(true);
-        const data = await notificationService.getUserNotifications(user.id, 100);
-        setNotifications(data);
-      } catch (err) {
-        console.error('Error fetching notifications:', err);
-        setError('Failed to load notifications');
-      } finally {
-        setLoading(false);
-      }
-    };
+    try {
+      if (!silent) setLoading(true);
+      const data = await notificationService.getUserNotifications(user.id, 100);
+      setNotifications(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      if (!silent) setError('Failed to load notifications');
+    } finally {
+      if (!silent) setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
-    fetchNotifications();
-  }, [user?.id]);
-
-  // Subscribe to real-time notifications
+  // Initial fetch, real-time subscription, and auto-polling
   useEffect(() => {
     if (!user?.id) return;
 
+    // Initial fetch
+    fetchNotifications();
+
+    // Subscribe to real-time notifications
     const channel = notificationService.subscribeToNotifications(user.id, (newNotification) => {
       console.log('New notification received:', newNotification);
       setNotifications(prev => [newNotification, ...prev]);
     });
 
+    // Auto-refresh notifications every 5 seconds (polling fallback for real-time)
+    const pollInterval = setInterval(async () => {
+      console.log('🔄 Auto-polling notifications...');
+      await fetchNotifications(true); // Silent refresh
+    }, 5000);
+
     return () => {
       if (channel) {
         notificationService.unsubscribeFromNotifications(channel);
       }
+      clearInterval(pollInterval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  // Manual refresh handler
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchNotifications(false);
+  };
 
   const handleViewNotification = async (notification) => {
     // Mark as read
@@ -162,6 +179,15 @@ export default function Notification({ setSidebarOpen }) {
         </div>
         
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            title="Refresh notifications"
+            className="p-2 hover:bg-stone-100 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <RotateCw className={`w-5 h-5 text-stone-700 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </button>
+          
           {notifications.some(n => !n.is_read) && (
             <button
               onClick={handleMarkAllAsRead}
@@ -196,25 +222,25 @@ export default function Notification({ setSidebarOpen }) {
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`p-3 md:p-4 flex items-start justify-between gap-3 border-b border-stone-200 last:border-b-0 transition-colors cursor-pointer ${
+                className={`p-2 md:p-3 flex items-start justify-between gap-2 transition-colors cursor-pointer ${
                   !notification.is_read 
                     ? 'bg-orange-50 hover:bg-orange-100' 
                     : 'bg-white hover:bg-stone-50'
                 }`}
                 onClick={() => handleViewNotification(notification)}
               >
-                <div className="flex items-start gap-2 md:gap-3 flex-1 min-w-0">
+                <div className="flex items-start gap-2 flex-1 min-w-0">
                   {/* Avatar */}
                   <div className="flex-shrink-0">
                     {notification.actor_avatar || notification.commenter_avatar ? (
                       <img
                         src={notification.actor_avatar || notification.commenter_avatar}
                         alt={notification.commenter_name}
-                        className="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover"
+                        className="w-8 h-8 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-stone-200 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs md:text-sm font-medium text-stone-600">
+                      <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-medium text-stone-600">
                           {getUserInitials(notification.commenter_name)}
                         </span>
                       </div>
@@ -223,33 +249,33 @@ export default function Notification({ setSidebarOpen }) {
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm md:text-base text-stone-800 break-words leading-relaxed font-medium">
+                    <p className="text-xs md:text-sm text-stone-800 break-words leading-tight font-medium">
                       {notification.commenter_name || notification.actor_name}
                     </p>
-                    <p className="text-xs md:text-sm text-stone-700 break-words leading-relaxed mt-1">
+                    <p className="text-xs text-stone-600 break-words leading-tight mt-0.5">
                       {getNotificationMessage(notification)}
                     </p>
                     
                     {notification.comment_text && (
-                      <p className="text-xs md:text-sm text-stone-600 italic mt-2 p-2 bg-stone-100 rounded border-l-2 border-stone-300 break-words">
+                      <p className="text-xs text-stone-600 italic mt-1 p-1.5 bg-stone-100 rounded border-l-2 border-stone-300 break-words">
                         &quot;{notification.comment_text}&quot;
                       </p>
                     )}
                     
-                    <p className="mt-2 text-xs text-stone-500">
+                    <p className="mt-1 text-xs text-stone-500">
                       {formatTime(notification.created_at)}
                     </p>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 md:gap-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
                       handleViewNotification(notification);
                     }}
-                    className="text-xs md:text-sm font-medium text-stone-800 hover:text-stone-600 transition-colors whitespace-nowrap underline underline-offset-1"
+                    className="text-xs font-medium text-stone-600 hover:text-stone-800 transition-colors whitespace-nowrap"
                   >
                     View
                   </button>

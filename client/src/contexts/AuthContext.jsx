@@ -177,12 +177,12 @@ export const AuthProvider = ({ children }) => {
         subscription = setupAuthListener();
       }
 
-      // Setup periodic session refresh every 2 minutes (instead of 4)
+      // Setup periodic session refresh every 1 minute for more aggressive session management
       if (mounted) {
         refreshInterval = setInterval(async () => {
-          console.log('🔄 Periodic session check (every 2 min)...');
+          console.log('🔄 Periodic session check (every 1 min)...');
           await refreshSessionIfNeeded();
-        }, 2 * 60 * 1000);
+        }, 1 * 60 * 1000);
       }
 
       // Setup window focus listener - refresh session when coming back from another tab

@@ -232,6 +232,8 @@ const ArticleSection = () => {
             {/* Search Input */}
             <div className="relative w-80">
               <input
+                id="search-desktop"
+                name="search"
                 type="text"
                 placeholder="Search"
                 className="w-full px-4 py-2.5 pr-10 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 text-gray-900"
@@ -246,6 +248,8 @@ const ArticleSection = () => {
           {/* Search Input */}
           <div className="relative">
             <input
+              id="search-mobile"
+              name="search"
               type="text"
               placeholder="Search"
               className="w-full px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 text-[#75716B] placeholder:text-[#75716B] text-sm"

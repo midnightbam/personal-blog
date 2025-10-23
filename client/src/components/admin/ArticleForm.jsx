@@ -180,6 +180,8 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
   const handleSaveDraft = async () => {
     try {
       setUploadingThumbnail(true);
+      console.log("Starting draft save...");
+      const startTime = performance.now();
       
       const articleToSave = {
         ...formData,
@@ -198,9 +200,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
             author_name: articleToSave.authorName,
             status: articleToSave.status,
             date: new Date().toISOString()
-          }])
-          .select()
-          .single();
+          }]);
 
         if (error) {
           console.error("Error creating draft:", error);
@@ -220,9 +220,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
             author_name: articleToSave.authorName,
             status: articleToSave.status
           })
-          .eq('id', formData.id)
-          .select()
-          .single();
+          .eq('id', formData.id);
 
         if (error) {
           console.error("Error updating draft:", error);
@@ -232,22 +230,27 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
         }
       }
 
-      if (onSave) {
-        onSave(articleToSave);
-      }
+      const endTime = performance.now();
+      console.log(`✅ Draft save completed in ${(endTime - startTime).toFixed(2)}ms`);
 
       toastSuccess(
         mode === 'create' ? "Create article and saved draft" : "Saved as draft",
         mode === 'create' ? "You can publish article later" : "Your article has been saved as draft"
       );
 
-      setTimeout(() => {
-        if (onBack) onBack();
-      }, 1000);
+      setUploadingThumbnail(false);
+
+      // Navigate back immediately after showing toast
+      if (onBack) {
+        setTimeout(() => onBack(), 500); // Reduced from 1000ms to 500ms
+      }
+
+      if (onSave) {
+        onSave(articleToSave);
+      }
     } catch (error) {
       console.error("Error saving draft:", error);
       sonnerToast.error("Failed to save draft");
-    } finally {
       setUploadingThumbnail(false);
     }
   };
@@ -260,6 +263,8 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
 
     try {
       setUploadingThumbnail(true);
+      console.log("Starting article save/publish...");
+      const startTime = performance.now();
       
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -286,9 +291,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
             user_id: articleToSave.user_id,
             status: articleToSave.status,
             date: new Date().toISOString()
-          }])
-          .select()
-          .single();
+          }]);
 
         if (error) {
           console.error("Error creating article:", error);
@@ -310,9 +313,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
             author_name: articleToSave.authorName,
             status: articleToSave.status
           })
-          .eq('id', formData.id)
-          .select()
-          .single();
+          .eq('id', formData.id);
 
         if (error) {
           console.error("Error updating article:", error);
@@ -324,22 +325,27 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
         console.log("Article updated");
       }
 
-      if (onSave) {
-        onSave(articleToSave);
-      }
+      const endTime = performance.now();
+      console.log(`✅ Article save completed in ${(endTime - startTime).toFixed(2)}ms`);
 
       toastSuccess(
         "Create article and published",
         "Your article has been successfully published"
       );
 
-      setTimeout(() => {
-        if (onBack) onBack();
-      }, 1000);
+      setUploadingThumbnail(false);
+
+      // Navigate back immediately after showing toast
+      if (onBack) {
+        setTimeout(() => onBack(), 500); // Reduced from 1000ms to 500ms
+      }
+
+      if (onSave) {
+        onSave(articleToSave);
+      }
     } catch (error) {
       console.error("Error saving article:", error);
       sonnerToast.error("Failed to publish article");
-    } finally {
       setUploadingThumbnail(false);
     }
   };

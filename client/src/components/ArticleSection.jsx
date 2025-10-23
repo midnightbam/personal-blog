@@ -31,31 +31,83 @@ export default function Articles() {
       try {
         setIsLoading(true);
 
-        // Fetch both categories and initial articles in parallel
-        const [categoriesResponse, articlesResponse] = await Promise.all([
-          supabase
-            .from('categories')
-            .select('name')
-            .order('name', { ascending: true }),
-          supabase
-            .from('articles')
-            .select('*', { count: 'exact' })
-            .eq('status', 'Published')
-            .order('date', { ascending: false })
-            .range(0, ITEMS_PER_PAGE - 1)
-        ]);
+        // First, ensure categories exist
+        let categoriesData = [];
+        const categoriesCheckResponse = await supabase
+          .from('categories')
+          .select('name')
+          .order('name', { ascending: true });
 
-        if (categoriesResponse.error) throw categoriesResponse.error;
+        if (categoriesCheckResponse.error) {
+          console.warn('Categories error:', categoriesCheckResponse.error);
+        } else {
+          categoriesData = categoriesCheckResponse.data || [];
+        }
+
+        // If no categories exist, create defaults
+        if (categoriesData.length === 0) {
+          console.log('No categories found, creating defaults...');
+          const defaultCategories = [
+            { name: 'Technology' },
+            { name: 'Business' },
+            { name: 'Lifestyle' },
+            { name: 'Travel' }
+          ];
+          const createResponse = await supabase
+            .from('categories')
+            .insert(defaultCategories)
+            .select('name');
+
+          if (!createResponse.error) {
+            categoriesData = createResponse.data || [];
+            console.log('Default categories created:', categoriesData);
+          }
+        }
+
+        // Fetch articles - try Published first, then fallback to all
+        let articlesResponse = await supabase
+          .from('articles')
+          .select('*', { count: 'exact' })
+          .eq('status', 'Published')
+          .order('date', { ascending: false })
+          .range(0, ITEMS_PER_PAGE - 1);
+
+        // If no published articles, publish drafts and fetch again
+        if (!articlesResponse.error && (!articlesResponse.data || articlesResponse.data.length === 0)) {
+          console.log('No published articles found, publishing drafts...');
+          const publishResponse = await supabase
+            .from('articles')
+            .update({ status: 'Published' })
+            .eq('status', 'Draft')
+            .select('id');
+
+          if (!publishResponse.error && (publishResponse.data?.length > 0)) {
+            console.log(`Published ${publishResponse.data.length} draft articles`);
+            // Fetch articles again
+            articlesResponse = await supabase
+              .from('articles')
+              .select('*', { count: 'exact' })
+              .eq('status', 'Published')
+              .order('date', { ascending: false })
+              .range(0, ITEMS_PER_PAGE - 1);
+          }
+        }
+
+        console.log('Final Categories:', categoriesData);
+        console.log('Final Articles Response:', articlesResponse);
+
         if (articlesResponse.error) throw articlesResponse.error;
 
-        const categoryNames = categoriesResponse.data?.map(cat => cat.name) || [];
-        setAllCategories(["Highlight", ...categoryNames]);
+        const categoryNames = categoriesData?.map(cat => cat.name) || [];
+        const finalCategories = ["Highlight", ...categoryNames];
+        setAllCategories(finalCategories);
 
         setAllPosts(articlesResponse.data || []);
-        setHasMore(articlesResponse.data.length === ITEMS_PER_PAGE);
+        setHasMore((articlesResponse.data || []).length === ITEMS_PER_PAGE);
       } catch (error) {
         console.error('Error fetching data:', error);
         setAllPosts([]);
+        setAllCategories(["Highlight"]);
       } finally {
         setIsLoading(false);
       }
@@ -194,6 +246,8 @@ export default function Articles() {
             {/* Search Input */}
             <div className="relative w-64">
               <Input
+                id="search-articles-desktop"
+                name="search-articles"
                 type="text"
                 placeholder="Search"
                 value={searchQuery}
@@ -210,6 +264,8 @@ export default function Articles() {
           {/* Search Input */}
           <div className="relative">
             <Input
+              id="search-articles-mobile"
+              name="search-articles"
               type="text"
               placeholder="Search"
               value={searchQuery}

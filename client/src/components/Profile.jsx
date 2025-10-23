@@ -131,6 +131,40 @@ export default function Profile() {
     }
   }, [user, authLoading, fetchUserProfile, navigate]);
 
+  // Set up real-time subscription for profile updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    console.log('🔔 Setting up real-time profile subscription for user:', user.id);
+    
+    const channel = supabase
+      .channel(`profile-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${user.id}`
+        },
+        async (payload) => {
+          console.log('🔄 Profile updated in real-time:', payload);
+          // Update local form data immediately
+          setFormData(prev => ({
+            ...prev,
+            name: payload.new.name || prev.name,
+            username: payload.new.username || prev.username,
+            avatar: payload.new.avatar_url || prev.avatar
+          }));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
   // Listen for visibility changes (tab switch)
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -261,6 +295,7 @@ export default function Profile() {
           name: formData.name,
           username: formData.username,
           avatar_url: formData.avatar,
+          updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
 
@@ -278,6 +313,9 @@ export default function Profile() {
 
       console.log('✅ Profile saved successfully');
       toastSuccess("Profile saved successfully", "Your profile has been successfully updated");
+      
+      // Immediately refresh profile to ensure real-time sync
+      await fetchUserProfile();
     } catch (error) {
       console.error("Error updating profile:", error);
       toastError(error.message || "Failed to update profile");
