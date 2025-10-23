@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Search, Check, ChevronDown } from 'lucide-react';
 
 // ========== BLOG CARD COMPONENT ==========
-function BlogCard({ id, image, category, title, description, author, date }) {
+function BlogCard({ id, image, category, title, description, author, authorAvatar, date }) {
   return (
     <div className="flex flex-col gap-4">
       {/* Clickable Image */}
@@ -35,9 +35,12 @@ function BlogCard({ id, image, category, title, description, author, date }) {
         
         <div className="flex items-center text-sm">
           <img 
-            className="w-8 h-8 rounded-full mr-2" 
-            src="https://res.cloudinary.com/dcbpjtd1r/image/upload/v1728449784/my-blog-post/xgfy0xnvyemkklcqodkg.jpg" 
-            alt={author} 
+            className="w-8 h-8 rounded-full mr-2 object-cover bg-gray-200" 
+            src={authorAvatar || `https://ui-avatars.com/api/?name=${author?.charAt(0) || 'A'}&background=12B279&color=fff`}
+            alt={author}
+            onError={(e) => {
+              e.target.src = `https://ui-avatars.com/api/?name=${author?.charAt(0) || 'A'}&background=12B279&color=fff`;
+            }}
           />
           <span>{author}</span>
           <span className="mx-2 text-gray-300">|</span>

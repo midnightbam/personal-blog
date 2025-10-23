@@ -8,8 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import BlogCard from "./BlogCard";
 
 export default function Articles() {
   const [allCategories, setAllCategories] = useState([]);
@@ -67,7 +67,7 @@ export default function Articles() {
         // Fetch articles - try Published first, then fallback to all
         let articlesResponse = await supabase
           .from('articles')
-          .select('*', { count: 'exact' })
+          .select('*, author:user_id(name, avatar_url)', { count: 'exact' })
           .eq('status', 'Published')
           .order('date', { ascending: false })
           .range(0, ITEMS_PER_PAGE - 1);
@@ -86,7 +86,7 @@ export default function Articles() {
             // Fetch articles again
             articlesResponse = await supabase
               .from('articles')
-              .select('*', { count: 'exact' })
+              .select('*, author:user_id(name, avatar_url)', { count: 'exact' })
               .eq('status', 'Published')
               .order('date', { ascending: false })
               .range(0, ITEMS_PER_PAGE - 1);
@@ -155,7 +155,7 @@ export default function Articles() {
 
       const query = supabase
         .from('articles')
-        .select('*')
+        .select('*, author:user_id(name, avatar_url)')
         .eq('status', 'Published')
         .order('date', { ascending: false })
         .range(from, to);
@@ -304,7 +304,8 @@ export default function Articles() {
                 category={blog.category}
                 title={blog.title}
                 description={blog.description}
-                author={blog.author_name}
+                author={blog.author?.name || blog.author_name || 'Anonymous'}
+                authorAvatar={blog.author?.avatar_url}
                 date={new Date(blog.date).toLocaleDateString("en-GB", {
                   day: "numeric",
                   month: "short",
@@ -334,59 +335,5 @@ export default function Articles() {
         )}
       </div>
     </section>
-  );
-}
-
-function BlogCard({ id, image, category, title, description, author, date }) {
-  const navigate = useNavigate();
-  
-  const handleClick = () => {
-    navigate(`/post/${id}`);
-  };
-  
-  return (
-    <div className="flex flex-col gap-3">
-      <button
-        onClick={handleClick}
-        className="relative h-[180px] sm:h-[280px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 rounded-md overflow-hidden group"
-      >
-        <img
-          className="w-full h-full object-cover rounded-md transition-transform duration-300 group-hover:scale-105"
-          src={image}
-          alt={title}
-          onError={(e) => {
-            e.target.src = "https://via.placeholder.com/400x300";
-          }}
-        />
-      </button>
-      <div className="flex flex-col">
-        <div className="flex">
-          <span className="bg-green-200 rounded-full px-2.5 py-0.5 text-xs font-semibold text-green-600 mb-2">
-            {category}
-          </span>
-        </div>
-        <button 
-          onClick={handleClick}
-          className="text-start focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 rounded"
-        >
-          <h2 className="font-bold text-lg mb-1.5 line-clamp-2 hover:underline">
-            {title}
-          </h2>
-        </button>
-        <p className="text-muted-foreground text-sm mb-3 flex-grow line-clamp-2">
-          {description}
-        </p>
-        <div className="flex items-center text-xs text-gray-600">
-          <img
-            className="w-7 h-7 rounded-full mr-2"
-            src="https://res.cloudinary.com/dcbpjtd1r/image/upload/v1728449784/my-blog-post/xgfy0xnvyemkklcqodkg.jpg"
-            alt={author}
-          />
-          <span className="font-medium">{author}</span>
-          <span className="mx-2 text-gray-300">|</span>
-          <span>{date}</span>
-        </div>
-      </div>
-    </div>
   );
 }
