@@ -93,7 +93,8 @@ const HeroSection = () => {
 
   const [authorData, setAuthorData] = useState({
     name: 'Punyanuch K.',
-    heroBio: defaultHeroBio
+    heroBio: defaultHeroBio,
+    introduction: 'Feed Your Mind. Inspire Your Heart.'
   });
 
   // Fetch author data from admin profile
@@ -105,7 +106,7 @@ const HeroSection = () => {
         // Fetch data from the specific admin email
         const { data, error } = await supabase
           .from('users')
-          .select('id, name, hero_bio, email, created_at')
+          .select('id, name, hero_bio, hero_introduction, email, created_at')
           .eq('email', 'bam.ksnru@gmail.com');
 
         if (error) {
@@ -120,10 +121,12 @@ const HeroSection = () => {
           console.log('📝 Admin email:', user.email);
           console.log('📝 User name:', user.name);
           console.log('📝 Hero bio:', user.hero_bio);
+          console.log('📝 Hero introduction:', user.hero_introduction);
           
           setAuthorData({
             name: user.name || 'Punyanuch K.',
-            heroBio: user.hero_bio || defaultHeroBio
+            heroBio: user.hero_bio || defaultHeroBio,
+            introduction: user.hero_introduction || 'Feed Your Mind. Inspire Your Heart.'
           });
         } else {
           console.log('⚠️ No admin user found');
@@ -165,7 +168,7 @@ const HeroSection = () => {
           <div className="flex-shrink-0 text-center lg:text-right lg:pr-4 xl:pr-6 w-full lg:w-auto lg:max-w-[280px] xl:max-w-[350px]">
             <h1 className="text-3xl sm:text-4xl md:text-4xl font-bold text-gray-800 text-center leading-tight">
               <span className="lg:inline">
-                Feed Your Mind. <br className="lg:inline hidden" />Inspire Your Heart.
+                {authorData.introduction}
               </span>
             </h1>
 

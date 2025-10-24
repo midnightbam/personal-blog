@@ -634,22 +634,21 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
           />
         </div>
 
-        {/* Introduction - Increased to 500 characters */}
+        {/* Introduction - No character limit */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-stone-700 mb-2">
-            Introduction (max 500 characters)
+            Introduction
           </label>
           <textarea
             placeholder="Write a brief introduction to your article..."
             value={formData.introduction}
             onChange={(e) => handleInputChange('introduction', e.target.value)}
-            maxLength={500}
             rows={6}
             className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400 resize-none disabled:opacity-50"
             disabled={uploadingThumbnail}
           />
           <div className="text-right text-xs text-stone-500 mt-1">
-            {formData.introduction.length} / 500
+            {formData.introduction.length} characters
           </div>
         </div>
 

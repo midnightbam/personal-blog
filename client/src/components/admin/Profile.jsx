@@ -128,6 +128,7 @@ export default function Profile({ setSidebarOpen }) {
     email: '',
     bio: '',
     heroBio: '',
+    heroIntroduction: '',
     profilePicture: null
   });
 
@@ -143,7 +144,7 @@ export default function Profile({ setSidebarOpen }) {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('name, username, email, bio, hero_bio')
+        .select('name, username, email, bio, hero_bio, hero_introduction')
         .eq('id', user.id)
         .single();
 
@@ -181,6 +182,7 @@ export default function Profile({ setSidebarOpen }) {
         email: data?.email || user.email,
         bio: data?.bio || '',
         heroBio: data?.hero_bio || '',
+        heroIntroduction: data?.hero_introduction || '',
         profilePicture: avatarUrl
       });
       setOriginalUsername(data?.username || '');
@@ -365,6 +367,7 @@ export default function Profile({ setSidebarOpen }) {
           username: profileData.username,
           bio: profileData.bio,
           hero_bio: profileData.heroBio,
+          hero_introduction: profileData.heroIntroduction,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
@@ -531,47 +534,62 @@ export default function Profile({ setSidebarOpen }) {
             />
           </div>
 
+          {/* Hero Introduction - For Home Page Header */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-2">
+              Homepage Introduction (Main Headline)
+            </label>
+            <textarea
+              value={profileData.heroIntroduction}
+              onChange={(e) => handleInputChange('heroIntroduction', e.target.value)}
+              rows={2}
+              className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400 resize-none"
+              placeholder="Enter the main headline for your homepage (e.g., Feed Your Mind. Inspire Your Heart.)"
+            />
+            <p className="text-xs text-stone-500 mt-1">
+              {profileData.heroIntroduction.length} characters
+            </p>
+          </div>
+
           {/* Hero Bio - For Home Page Display */}
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-2">
-              Homepage Bio (max 300 characters)
+              Homepage Bio
             </label>
             <div className="border border-stone-300 rounded-lg overflow-hidden">
               <FormattingToolbar onFormat={handleFormatHeroBio} />
               <textarea
                 ref={heroBioTextareaRef}
                 value={profileData.heroBio}
-                onChange={(e) => handleInputChange('heroBio', e.target.value.slice(0, 300))}
-                maxLength={300}
+                onChange={(e) => handleInputChange('heroBio', e.target.value)}
                 rows={6}
                 className="w-full px-4 py-3 bg-white text-sm text-stone-700 placeholder-stone-400 focus:outline-none resize-none"
                 placeholder="Bio that displays on the homepage hero section... (Press Enter for line breaks, select text and use buttons to format)"
               />
             </div>
             <p className="text-xs text-stone-500 mt-1">
-              {profileData.heroBio.length}/300 characters — Press Enter to create line breaks
+              {profileData.heroBio.length} characters
             </p>
           </div>
 
           {/* Bio */}
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-2">
-              Pop-up Bio (max 120 characters)
+              Pop-up Bio
             </label>
             <div className="border border-stone-300 rounded-lg overflow-hidden">
               <FormattingToolbar onFormat={handleFormatBio} />
               <textarea
                 ref={bioTextareaRef}
                 value={profileData.bio}
-                onChange={(e) => handleInputChange('bio', e.target.value.slice(0, 120))}
-                maxLength={120}
+                onChange={(e) => handleInputChange('bio', e.target.value)}
                 rows={8}
                 className="w-full px-4 py-3 bg-white text-sm text-stone-700 placeholder-stone-400 focus:outline-none resize-none"
                 placeholder="Tell us about yourself... (Select text and use buttons to format)"
               />
             </div>
             <p className="text-xs text-stone-500 mt-1">
-              {profileData.bio.length}/120 characters
+              {profileData.bio.length} characters
             </p>
           </div>
         </div>
