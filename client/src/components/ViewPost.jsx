@@ -781,6 +781,37 @@ function CommentItem({ comment, currentUserId, onEdit, onDelete }) {
   );
 }
 
+// Parse inline formatting: **bold**, *italic*, __underline__
+function parseInlineBioFormatting(text) {
+  const parts = [];
+  let lastIndex = 0;
+
+  const regex = /\*\*(.+?)\*\*|\*(.+?)\*|__(.+?)__/g;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+
+    if (match[1]) {
+      parts.push(<strong key={`bold-${match.index}`}>{match[1]}</strong>);
+    } else if (match[2]) {
+      parts.push(<em key={`italic-${match.index}`}>{match[2]}</em>);
+    } else if (match[3]) {
+      parts.push(<u key={`underline-${match.index}`}>{match[3]}</u>);
+    }
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+}
+
 function AuthorBio({ author }) {
   const [authorData, setAuthorData] = useState({
     name: author?.author_name || "Unknown",
@@ -843,7 +874,27 @@ function AuthorBio({ author }) {
       <hr className="border-[#DAD6D1] mb-3" />
       <div className="text-gray-700 space-y-2 text-xs leading-relaxed">
         {authorData.bio ? (
-          <p>{authorData.bio}</p>
+          <div className="space-y-1">
+            {authorData.bio.split('\n').map((line, idx) => (
+              <div key={idx}>
+                {line.trim() && (
+                  line.match(/^[•-]\s/) ? (
+                    <div className="flex gap-2">
+                      <span>•</span>
+                      <span>{parseInlineBioFormatting(line.replace(/^[•-]\s/, ''))}</span>
+                    </div>
+                  ) : line.match(/^\d+\.\s/) ? (
+                    <div className="flex gap-2">
+                      <span>{line.split('.')[0]}.</span>
+                      <span>{parseInlineBioFormatting(line.replace(/^\d+\.\s/, ''))}</span>
+                    </div>
+                  ) : (
+                    <p>{parseInlineBioFormatting(line)}</p>
+                  )
+                )}
+              </div>
+            ))}
+          </div>
         ) : (
           <>
             <p>Just a chill human who likes reading, YouTube binges, and long naps (when not writing here).</p>
