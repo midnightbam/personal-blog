@@ -428,7 +428,7 @@ export default function Profile({ setSidebarOpen }) {
           {/* Hero Bio - For Home Page Display */}
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-2">
-              Hero Bio (for homepage - max 300 characters)
+              Homepage Bio (max 300 characters)
             </label>
             <textarea
               value={profileData.heroBio}
@@ -446,7 +446,7 @@ export default function Profile({ setSidebarOpen }) {
           {/* Bio */}
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-2">
-              Bio (max 120 characters)
+              Pop-up Bio (max 120 characters)
             </label>
             <textarea
               value={profileData.bio}
