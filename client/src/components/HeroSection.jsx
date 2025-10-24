@@ -1,6 +1,91 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
+// Function to parse and render formatted text
+const renderFormattedText = (text) => {
+  if (!text) return '';
+
+  const lines = text.split('\n');
+  const elements = [];
+
+  lines.forEach((line, lineIndex) => {
+    if (!line) {
+      elements.push(<br key={`br-${lineIndex}`} />);
+      return;
+    }
+
+    // Handle bullet points (• text or - text)
+    if (line.match(/^[•\-]\s/)) {
+      const content = line.replace(/^[•\-]\s/, '');
+      elements.push(
+        <div key={`bullet-${lineIndex}`} className="flex gap-2">
+          <span>•</span>
+          <span>{parseInlineFormatting(content)}</span>
+        </div>
+      );
+      return;
+    }
+
+    // Handle numbered lists (1. text, 2. text, etc)
+    const numberMatch = line.match(/^(\d+)\.\s/);
+    if (numberMatch) {
+      const content = line.replace(/^\d+\.\s/, '');
+      elements.push(
+        <div key={`number-${lineIndex}`} className="flex gap-2">
+          <span>{numberMatch[1]}.</span>
+          <span>{parseInlineFormatting(content)}</span>
+        </div>
+      );
+      return;
+    }
+
+    // Regular text with inline formatting
+    elements.push(
+      <div key={`line-${lineIndex}`}>{parseInlineFormatting(line)}</div>
+    );
+  });
+
+  return elements;
+};
+
+// Parse inline formatting: **bold**, *italic*, __underline__
+const parseInlineFormatting = (text) => {
+  const parts = [];
+  let lastIndex = 0;
+
+  // Match **bold**, *italic*, __underline__
+  const regex = /\*\*(.+?)\*\*|\*(.+?)\*|__(.+?)__/g;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Add text before match
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+
+    // Add formatted text
+    if (match[1]) {
+      // Bold
+      parts.push(<strong key={`bold-${match.index}`}>{match[1]}</strong>);
+    } else if (match[2]) {
+      // Italic
+      parts.push(<em key={`italic-${match.index}`}>{match[2]}</em>);
+    } else if (match[3]) {
+      // Underline
+      parts.push(<u key={`underline-${match.index}`}>{match[3]}</u>);
+    }
+
+    lastIndex = regex.lastIndex;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+};
+
 const HeroSection = () => {
   // Panda image from public folder
   const heroImage = '/Panda-Bamboo_Panda-Quiz_KIDS_1021.avif';
@@ -104,8 +189,8 @@ const HeroSection = () => {
           <div className="flex-shrink-0 w-full lg:w-auto lg:max-w-[280px] xl:max-w-[350px] lg:pl-4 xl:pl-6 px-4 sm:px-6 lg:px-0">
             <p className="text-sm sm:text-base lg:text-xs xl:text-sm text-gray-500 mb-1.5 lg:mb-2">—Author</p>
             <h2 className="text-2xl sm:text-3xl lg:text-xl xl:text-2xl font-bold text-gray-900 mb-2.5 sm:mb-3 lg:mb-3">{authorData.name}</h2>
-            <div className="text-base sm:text-lg md:text-xl lg:text-sm xl:text-base text-gray-600 leading-relaxed whitespace-pre-wrap">
-              {authorData.heroBio}
+            <div className="text-base sm:text-lg md:text-xl lg:text-sm xl:text-base text-gray-600 leading-relaxed space-y-2">
+              {renderFormattedText(authorData.heroBio)}
             </div>
           </div>
         </div>

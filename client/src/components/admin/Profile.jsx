@@ -1,6 +1,6 @@
 // src/components/admin/Profile.jsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { Menu } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Menu, Bold, Italic, Underline, List, ListOrdered } from 'lucide-react';
 import { toast as sonnerToast } from "sonner";
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,8 +30,98 @@ const toastError = (message) => {
   });
 };
 
+// Formatting helpers
+const applyFormatting = (text, type, textareaRef) => {
+  const textarea = textareaRef.current;
+  if (!textarea) return text;
+
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selectedText = text.substring(start, end);
+  
+  if (!selectedText) return text; // No text selected
+
+  let formatted = '';
+  switch (type) {
+    case 'bold':
+      formatted = `**${selectedText}**`;
+      break;
+    case 'italic':
+      formatted = `*${selectedText}*`;
+      break;
+    case 'underline':
+      formatted = `__${selectedText}__`;
+      break;
+    case 'bullet':
+      formatted = selectedText.split('\n').map(line => `• ${line}`).join('\n');
+      break;
+    case 'number':
+      formatted = selectedText.split('\n').map((line, i) => `${i + 1}. ${line}`).join('\n');
+      break;
+    default:
+      return text;
+  }
+
+  const newText = text.substring(0, start) + formatted + text.substring(end);
+  return newText;
+};
+
+const FormattingToolbar = ({ onFormat, size = 'md' }) => {
+  const buttonClass = size === 'sm' ? 'p-1.5 text-xs' : 'p-2 text-sm';
+  const iconClass = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
+  
+  return (
+    <div className="flex gap-0.5 border-b border-stone-200 p-1.5 bg-stone-50 rounded-t-lg">
+      <button
+        type="button"
+        onClick={() => onFormat('bold')}
+        className={`${buttonClass} hover:bg-stone-200 rounded transition-colors`}
+        title="Bold (Select text first)"
+      >
+        <Bold className={iconClass} />
+      </button>
+      <button
+        type="button"
+        onClick={() => onFormat('italic')}
+        className={`${buttonClass} hover:bg-stone-200 rounded transition-colors`}
+        title="Italic (Select text first)"
+      >
+        <Italic className={iconClass} />
+      </button>
+      <button
+        type="button"
+        onClick={() => onFormat('underline')}
+        className={`${buttonClass} hover:bg-stone-200 rounded transition-colors`}
+        title="Underline (Select text first)"
+      >
+        <Underline className={iconClass} />
+      </button>
+      <div className="border-l border-stone-300 mx-0.5"></div>
+      <button
+        type="button"
+        onClick={() => onFormat('bullet')}
+        className={`${buttonClass} hover:bg-stone-200 rounded transition-colors`}
+        title="Bullet list (Select text first)"
+      >
+        <List className={iconClass} />
+      </button>
+      <button
+        type="button"
+        onClick={() => onFormat('number')}
+        className={`${buttonClass} hover:bg-stone-200 rounded transition-colors`}
+        title="Numbered list (Select text first)"
+      >
+        <ListOrdered className={iconClass} />
+      </button>
+    </div>
+  );
+};
+
 export default function Profile({ setSidebarOpen }) {
   const { user } = useAuth();
+  const heroBioTextareaRef = useRef(null);
+  const bioTextareaRef = useRef(null);
+  
   const [profileData, setProfileData] = useState({
     name: '',
     username: '',
@@ -187,6 +277,22 @@ export default function Profile({ setSidebarOpen }) {
     if (field === 'username') {
       setUsernameError('');
     }
+  };
+
+  const handleFormatHeroBio = (type) => {
+    const newText = applyFormatting(profileData.heroBio, type, heroBioTextareaRef);
+    setProfileData(prev => ({
+      ...prev,
+      heroBio: newText.slice(0, 300)
+    }));
+  };
+
+  const handleFormatBio = (type) => {
+    const newText = applyFormatting(profileData.bio, type, bioTextareaRef);
+    setProfileData(prev => ({
+      ...prev,
+      bio: newText.slice(0, 120)
+    }));
   };
 
   const handleProfilePictureUpload = async (e) => {
@@ -430,14 +536,18 @@ export default function Profile({ setSidebarOpen }) {
             <label className="block text-sm font-medium text-stone-700 mb-2">
               Homepage Bio (max 300 characters)
             </label>
-            <textarea
-              value={profileData.heroBio}
-              onChange={(e) => handleInputChange('heroBio', e.target.value.slice(0, 300))}
-              maxLength={300}
-              rows={6}
-              className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400 resize-none"
-              placeholder="Bio that displays on the homepage hero section... (Press Enter for line breaks)"
-            />
+            <div className="border border-stone-300 rounded-lg overflow-hidden">
+              <FormattingToolbar onFormat={handleFormatHeroBio} />
+              <textarea
+                ref={heroBioTextareaRef}
+                value={profileData.heroBio}
+                onChange={(e) => handleInputChange('heroBio', e.target.value.slice(0, 300))}
+                maxLength={300}
+                rows={6}
+                className="w-full px-4 py-3 bg-white text-sm text-stone-700 placeholder-stone-400 focus:outline-none resize-none"
+                placeholder="Bio that displays on the homepage hero section... (Press Enter for line breaks, select text and use buttons to format)"
+              />
+            </div>
             <p className="text-xs text-stone-500 mt-1">
               {profileData.heroBio.length}/300 characters — Press Enter to create line breaks
             </p>
@@ -448,14 +558,18 @@ export default function Profile({ setSidebarOpen }) {
             <label className="block text-sm font-medium text-stone-700 mb-2">
               Pop-up Bio (max 120 characters)
             </label>
-            <textarea
-              value={profileData.bio}
-              onChange={(e) => handleInputChange('bio', e.target.value.slice(0, 120))}
-              maxLength={120}
-              rows={8}
-              className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400 resize-none"
-              placeholder="Tell us about yourself..."
-            />
+            <div className="border border-stone-300 rounded-lg overflow-hidden">
+              <FormattingToolbar onFormat={handleFormatBio} />
+              <textarea
+                ref={bioTextareaRef}
+                value={profileData.bio}
+                onChange={(e) => handleInputChange('bio', e.target.value.slice(0, 120))}
+                maxLength={120}
+                rows={8}
+                className="w-full px-4 py-3 bg-white text-sm text-stone-700 placeholder-stone-400 focus:outline-none resize-none"
+                placeholder="Tell us about yourself... (Select text and use buttons to format)"
+              />
+            </div>
             <p className="text-xs text-stone-500 mt-1">
               {profileData.bio.length}/120 characters
             </p>
