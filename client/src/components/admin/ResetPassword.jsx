@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, Eye, EyeOff } from 'lucide-react';
 import { toast as sonnerToast } from "sonner";
+import { supabase } from '@/lib/supabase';
 
 const toastSuccess = (message, description = "") => {
   sonnerToast.success(message, {
@@ -47,19 +48,74 @@ export default function ResetPassword({ sidebarOpen, setSidebarOpen }) {
     }));
   };
 
-  const handleSave = () => {
-    if (passwords.new !== passwords.confirm) {
-      alert('New passwords do not match!');
+  const handleSave = async () => {
+    // Validate inputs
+    if (!passwords.current) {
+      sonnerToast.error('Current password is required');
       return;
     }
     
-    toastSuccess('Password changed', 'Your password has been successfully updated');
+    if (!passwords.new) {
+      sonnerToast.error('New password is required');
+      return;
+    }
+
+    if (passwords.new.length < 6) {
+      sonnerToast.error('New password must be at least 6 characters');
+      return;
+    }
     
-    setPasswords({
-      current: '',
-      new: '',
-      confirm: ''
-    });
+    if (passwords.new !== passwords.confirm) {
+      sonnerToast.error('New passwords do not match!');
+      return;
+    }
+
+    if (passwords.current === passwords.new) {
+      sonnerToast.error('New password must be different from current password');
+      return;
+    }
+
+    try {
+      // First, try to sign in with current credentials to verify the current password
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user || !user.email) {
+        sonnerToast.error('Unable to verify user');
+        return;
+      }
+
+      // Try to re-authenticate with the current password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: passwords.current
+      });
+
+      if (signInError) {
+        sonnerToast.error('Current password is incorrect');
+        return;
+      }
+
+      // If current password is correct, update to new password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwords.new
+      });
+
+      if (updateError) {
+        sonnerToast.error('Failed to update password: ' + updateError.message);
+        return;
+      }
+
+      toastSuccess('Password changed', 'Your password has been successfully updated');
+      
+      setPasswords({
+        current: '',
+        new: '',
+        confirm: ''
+      });
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      sonnerToast.error('Failed to reset password');
+    }
   };
 
   return (
