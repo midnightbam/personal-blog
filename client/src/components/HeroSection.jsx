@@ -15,15 +15,13 @@ const HeroSection = () => {
   useEffect(() => {
     const fetchAuthorData = async () => {
       try {
-        console.log('🔍 Fetching author data...');
+        console.log('🔍 Fetching admin author data...');
         
-        // First, try to get the user with a role field (if you have one)
-        // Otherwise, get the first user created (oldest account = admin)
+        // Fetch data from the specific admin email
         const { data, error } = await supabase
           .from('users')
-          .select('id, name, hero_bio, role, created_at')
-          .order('created_at', { ascending: true })
-          .limit(1);
+          .select('id, name, hero_bio, email, created_at')
+          .eq('email', 'bam.ksnru@gmail.com');
 
         if (error) {
           console.error('❌ Error fetching author data:', error);
@@ -34,6 +32,7 @@ const HeroSection = () => {
 
         if (data && data.length > 0) {
           const user = data[0];
+          console.log('📝 Admin email:', user.email);
           console.log('📝 User name:', user.name);
           console.log('📝 Hero bio:', user.hero_bio);
           
@@ -42,7 +41,7 @@ const HeroSection = () => {
             heroBio: user.hero_bio || defaultHeroBio
           });
         } else {
-          console.log('⚠️ No user found');
+          console.log('⚠️ No admin user found');
         }
       } catch (err) {
         console.error('Exception fetching author:', err);
