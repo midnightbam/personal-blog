@@ -21,7 +21,7 @@ const toastSuccess = (message, description = "") => {
   });
 };
 
-export default function CategoryForm({ mode = 'create', categoryData = null, onSave, onBack, sidebarOpen, setSidebarOpen }) {
+export default function CategoryForm({ mode = 'create', categoryData = null, onBack, setSidebarOpen }) {
   const [categoryName, setCategoryName] = useState(categoryData?.name || '');
   const [loading, setLoading] = useState(false);
 

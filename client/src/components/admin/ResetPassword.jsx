@@ -21,6 +21,24 @@ const toastSuccess = (message, description = "") => {
   });
 };
 
+const toastError = (message, description = "") => {
+  sonnerToast.error(message, {
+    description,
+    duration: 4000,
+    position: "top-center",
+    style: {
+      background: '#EF4444',
+      color: 'white',
+      border: 'none',
+    },
+    classNames: {
+      description: '!text-white',
+      closeButton: '!bg-transparent !text-white hover:!bg-white/10 !absolute !right-1 !left-auto !top-4',
+    },
+    closeButton: true,
+  });
+};
+
 export default function ResetPassword({ setSidebarOpen }) {
   const [passwords, setPasswords] = useState({
     current: '',
@@ -33,6 +51,8 @@ export default function ResetPassword({ setSidebarOpen }) {
     new: false,
     confirm: false
   });
+
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (field, value) => {
     setPasswords(prev => ({
@@ -51,36 +71,39 @@ export default function ResetPassword({ setSidebarOpen }) {
   const handleSave = async () => {
     // Validate inputs
     if (!passwords.current) {
-      sonnerToast.error('Current password is required');
+      toastError('Current password is required');
       return;
     }
     
     if (!passwords.new) {
-      sonnerToast.error('New password is required');
+      toastError('New password is required');
       return;
     }
 
     if (passwords.new.length < 6) {
-      sonnerToast.error('New password must be at least 6 characters');
+      toastError('New password must be at least 6 characters');
       return;
     }
     
     if (passwords.new !== passwords.confirm) {
-      sonnerToast.error('New passwords do not match!');
+      toastError('New passwords do not match!');
       return;
     }
 
     if (passwords.current === passwords.new) {
-      sonnerToast.error('New password must be different from current password');
+      toastError('New password must be different from current password');
       return;
     }
+
+    setLoading(true);
 
     try {
       // First, try to sign in with current credentials to verify the current password
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user || !user.email) {
-        sonnerToast.error('Unable to verify user');
+        toastError('Unable to verify user');
+        setLoading(false);
         return;
       }
 
@@ -91,7 +114,8 @@ export default function ResetPassword({ setSidebarOpen }) {
       });
 
       if (signInError) {
-        sonnerToast.error('Current password is incorrect');
+        toastError('Current password is incorrect');
+        setLoading(false);
         return;
       }
 
@@ -101,7 +125,8 @@ export default function ResetPassword({ setSidebarOpen }) {
       });
 
       if (updateError) {
-        sonnerToast.error('Failed to update password: ' + updateError.message);
+        toastError('Failed to update password', updateError.message);
+        setLoading(false);
         return;
       }
 
@@ -112,9 +137,19 @@ export default function ResetPassword({ setSidebarOpen }) {
         new: '',
         confirm: ''
       });
+      
+      setLoading(false);
     } catch (error) {
       console.error('Error resetting password:', error);
-      sonnerToast.error('Failed to reset password');
+      toastError('Failed to reset password', error.message || 'An error occurred');
+      setLoading(false);
+    }
+  };
+
+  // Handle Enter key press to submit form
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !loading) {
+      handleSave();
     }
   };
 
@@ -136,9 +171,10 @@ export default function ResetPassword({ setSidebarOpen }) {
         <div className="hidden lg:flex items-center gap-3">
           <button
             onClick={handleSave}
-            className="bg-stone-800 text-white px-4 md:px-6 py-2 rounded-full text-xs font-medium hover:bg-stone-700 transition-colors"
+            disabled={loading}
+            className="bg-stone-800 text-white px-4 md:px-6 py-2 rounded-full text-xs font-medium hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save
+            {loading ? "Saving..." : "Save"}
           </button>
         </div>
       </div>
@@ -156,7 +192,9 @@ export default function ResetPassword({ setSidebarOpen }) {
                 type={showPassword.current ? "text" : "password"}
                 value={passwords.current}
                 onChange={(e) => handleInputChange('current', e.target.value)}
-                className="w-full px-4 py-3 pr-12 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400"
+                onKeyPress={handleKeyPress}
+                disabled={loading}
+                className="w-full px-4 py-3 pr-12 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400 disabled:opacity-50"
                 placeholder="Enter current password"
               />
               <button
@@ -183,7 +221,9 @@ export default function ResetPassword({ setSidebarOpen }) {
                 type={showPassword.new ? "text" : "password"}
                 value={passwords.new}
                 onChange={(e) => handleInputChange('new', e.target.value)}
-                className="w-full px-4 py-3 pr-12 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400"
+                onKeyPress={handleKeyPress}
+                disabled={loading}
+                className="w-full px-4 py-3 pr-12 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400 disabled:opacity-50"
                 placeholder="Enter new password"
               />
               <button
@@ -210,7 +250,9 @@ export default function ResetPassword({ setSidebarOpen }) {
                 type={showPassword.confirm ? "text" : "password"}
                 value={passwords.confirm}
                 onChange={(e) => handleInputChange('confirm', e.target.value)}
-                className="w-full px-4 py-3 pr-12 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400"
+                onKeyPress={handleKeyPress}
+                disabled={loading}
+                className="w-full px-4 py-3 pr-12 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400 disabled:opacity-50"
                 placeholder="Confirm new password"
               />
               <button
@@ -233,9 +275,10 @@ export default function ResetPassword({ setSidebarOpen }) {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 px-4 py-3 z-20">
         <button
           onClick={handleSave}
-          className="w-full bg-stone-800 text-white py-3 rounded-full text-sm font-medium hover:bg-stone-700 transition-colors"
+          disabled={loading}
+          className="w-full bg-stone-800 text-white py-3 rounded-full text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Save
+          {loading ? "Saving..." : "Save"}
         </button>
       </div>
     </div>
