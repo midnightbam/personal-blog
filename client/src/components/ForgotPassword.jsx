@@ -54,8 +54,13 @@ export default function ForgotPassword() {
     try {
       console.log("📧 Sending password reset email to:", email);
 
+      // Use your production URL for the redirect
+      const redirectUrl = window.location.hostname === 'localhost' 
+        ? `${window.location.origin}/reset-password`
+        : 'https://personal-blog-ashen-three.vercel.app/reset-password';
+
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: redirectUrl,
       });
 
       if (resetError) {
