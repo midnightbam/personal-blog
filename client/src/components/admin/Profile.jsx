@@ -128,7 +128,6 @@ export default function Profile({ setSidebarOpen }) {
     email: '',
     bio: '',
     heroBio: '',
-    heroIntroduction: '',
     profilePicture: null
   });
 
@@ -144,7 +143,7 @@ export default function Profile({ setSidebarOpen }) {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('name, username, email, bio, hero_bio, hero_introduction')
+        .select('name, username, email, bio, hero_bio')
         .eq('id', user.id)
         .single();
 
@@ -182,7 +181,6 @@ export default function Profile({ setSidebarOpen }) {
         email: data?.email || user.email,
         bio: data?.bio || '',
         heroBio: data?.hero_bio || '',
-        heroIntroduction: data?.hero_introduction || '',
         profilePicture: avatarUrl
       });
       setOriginalUsername(data?.username || '');
@@ -367,7 +365,6 @@ export default function Profile({ setSidebarOpen }) {
           username: profileData.username,
           bio: profileData.bio,
           hero_bio: profileData.heroBio,
-          hero_introduction: profileData.heroIntroduction,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
@@ -532,23 +529,6 @@ export default function Profile({ setSidebarOpen }) {
               disabled
               className="w-full px-4 py-3 bg-gray-100 border border-stone-200 rounded-lg text-sm text-stone-500"
             />
-          </div>
-
-          {/* Hero Introduction - For Home Page Header */}
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-2">
-              Homepage Introduction (Main Headline)
-            </label>
-            <textarea
-              value={profileData.heroIntroduction}
-              onChange={(e) => handleInputChange('heroIntroduction', e.target.value)}
-              rows={2}
-              className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400 resize-none"
-              placeholder="Enter the main headline for your homepage (e.g., Feed Your Mind. Inspire Your Heart.)"
-            />
-            <p className="text-xs text-stone-500 mt-1">
-              {profileData.heroIntroduction.length} characters
-            </p>
           </div>
 
           {/* Hero Bio - For Home Page Display */}
