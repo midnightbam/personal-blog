@@ -37,6 +37,7 @@ export default function Profile({ setSidebarOpen }) {
     username: '',
     email: '',
     bio: '',
+    heroBio: '',
     profilePicture: null
   });
 
@@ -52,7 +53,7 @@ export default function Profile({ setSidebarOpen }) {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('name, username, email, bio')
+        .select('name, username, email, bio, hero_bio')
         .eq('id', user.id)
         .single();
 
@@ -89,6 +90,7 @@ export default function Profile({ setSidebarOpen }) {
         username: data?.username || '',
         email: data?.email || user.email,
         bio: data?.bio || '',
+        heroBio: data?.hero_bio || '',
         profilePicture: avatarUrl
       });
       setOriginalUsername(data?.username || '');
@@ -256,6 +258,7 @@ export default function Profile({ setSidebarOpen }) {
           name: profileData.name,
           username: profileData.username,
           bio: profileData.bio,
+          hero_bio: profileData.heroBio,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
@@ -420,6 +423,24 @@ export default function Profile({ setSidebarOpen }) {
               disabled
               className="w-full px-4 py-3 bg-gray-100 border border-stone-200 rounded-lg text-sm text-stone-500"
             />
+          </div>
+
+          {/* Hero Bio - For Home Page Display */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-2">
+              Hero Bio (for homepage - max 300 characters)
+            </label>
+            <textarea
+              value={profileData.heroBio}
+              onChange={(e) => handleInputChange('heroBio', e.target.value.slice(0, 300))}
+              maxLength={300}
+              rows={6}
+              className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400 resize-none"
+              placeholder="Bio that displays on the homepage hero section..."
+            />
+            <p className="text-xs text-stone-500 mt-1">
+              {profileData.heroBio.length}/300 characters
+            </p>
           </div>
 
           {/* Bio */}

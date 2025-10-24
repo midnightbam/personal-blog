@@ -1,8 +1,68 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const HeroSection = () => {
   // Panda image from public folder
   const heroImage = '/Panda-Bamboo_Panda-Quiz_KIDS_1021.avif';
+  const defaultHeroBio = 'I am a curious and dedicated learner with a love for exploring new ideas and skills. Always eager to understand the world around me, I enjoy diving into topics that spark my creativity and curiosity. When I\'m not learning or experimenting, I enjoy spending time on personal projects, exploring ways to grow, and connecting with others who share my interests.';
+
+  const [authorData, setAuthorData] = useState({
+    name: 'Punyanuch K.',
+    heroBio: defaultHeroBio
+  });
+
+  // Fetch author data from admin profile
+  useEffect(() => {
+    const fetchAuthorData = async () => {
+      try {
+        // Get the first user (admin) - adjust this query if needed to target specific admin
+        const { data, error } = await supabase
+          .from('users')
+          .select('name, hero_bio')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching author data:', error);
+          return;
+        }
+
+        if (data) {
+          setAuthorData({
+            name: data.name || 'Punyanuch K.',
+            heroBio: data.hero_bio || defaultHeroBio
+          });
+        }
+      } catch (err) {
+        console.error('Exception fetching author:', err);
+      }
+    };
+
+    fetchAuthorData();
+
+    // Subscribe to real-time changes to author profile
+    const channel = supabase
+      .channel('hero-author-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users'
+        },
+        async (payload) => {
+          console.log('Author profile updated:', payload);
+          // Refetch data when author profile is updated
+          await fetchAuthorData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [defaultHeroBio]);
   return (
     <section className="bg-gradient-to-b from-white to-gray-50 py-4 sm:py-6 md:py-8 lg:py-6 xl:py-8 flex items-center">
       <div className="px-4 sm:px-6 md:px-8 lg:px-12 max-w-[1400px] mx-auto w-full">
@@ -34,11 +94,10 @@ const HeroSection = () => {
           {/* Right Content - Author Info */}
           <div className="flex-shrink-0 w-full lg:w-auto lg:max-w-[280px] xl:max-w-[350px] lg:pl-4 xl:pl-6 px-4 sm:px-6 lg:px-0">
             <p className="text-sm sm:text-base lg:text-xs xl:text-sm text-gray-500 mb-1.5 lg:mb-2">—Author</p>
-            <h2 className="text-2xl sm:text-3xl lg:text-xl xl:text-2xl font-bold text-gray-900 mb-2.5 sm:mb-3 lg:mb-3">Punyanuch K.</h2>
-            <p className="text-base sm:text-lg md:text-xl lg:text-sm xl:text-base text-gray-600 leading-relaxed mb-2.5 sm:mb-3 lg:mb-3">
-I am a curious and dedicated learner with a love for exploring new ideas and skills. Always eager to understand the world around me, I enjoy diving into topics that spark my creativity and curiosity.            </p>
+            <h2 className="text-2xl sm:text-3xl lg:text-xl xl:text-2xl font-bold text-gray-900 mb-2.5 sm:mb-3 lg:mb-3">{authorData.name}</h2>
             <p className="text-base sm:text-lg md:text-xl lg:text-sm xl:text-base text-gray-600 leading-relaxed">
-When I’m not learning or experimenting, I enjoy spending time on personal projects, exploring ways to grow, and connecting with others who share my interests.            </p>
+              {authorData.heroBio}
+            </p>
           </div>
         </div>
       </div>
