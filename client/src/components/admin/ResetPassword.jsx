@@ -21,7 +21,7 @@ const toastSuccess = (message, description = "") => {
   });
 };
 
-export default function ResetPassword({ sidebarOpen, setSidebarOpen }) {
+export default function ResetPassword({ setSidebarOpen }) {
   const [passwords, setPasswords] = useState({
     current: '',
     new: '',
