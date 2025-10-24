@@ -436,10 +436,10 @@ export default function Profile({ setSidebarOpen }) {
               maxLength={300}
               rows={6}
               className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder-stone-400 focus:outline-none focus:border-stone-400 resize-none"
-              placeholder="Bio that displays on the homepage hero section..."
+              placeholder="Bio that displays on the homepage hero section... (Press Enter for line breaks)"
             />
             <p className="text-xs text-stone-500 mt-1">
-              {profileData.heroBio.length}/300 characters
+              {profileData.heroBio.length}/300 characters — Press Enter to create line breaks
             </p>
           </div>
 
