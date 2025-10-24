@@ -37,7 +37,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
   const [formData, setFormData] = useState({
     id: articleData?.id || null,
     thumbnail: articleData?.thumbnail || null,
-    category: articleData?.category || '',
+    category_id: articleData?.category_id || '',
     authorName: 'Punyanuch K.', // Locked author name
     title: articleData?.title || '',
     introduction: articleData?.description || articleData?.introduction || '',
@@ -197,7 +197,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
             description: articleToSave.introduction,
             content: articleToSave.content,
             thumbnail: articleToSave.thumbnail,
-            category: articleToSave.category,
+            category_id: articleToSave.category_id || null,
             author_name: articleToSave.authorName,
             status: articleToSave.status,
             date: new Date().toISOString()
@@ -217,7 +217,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
             description: articleToSave.introduction,
             content: articleToSave.content,
             thumbnail: articleToSave.thumbnail,
-            category: articleToSave.category,
+            category_id: articleToSave.category_id || null,
             author_name: articleToSave.authorName,
             status: articleToSave.status
           })
@@ -287,7 +287,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
             description: articleToSave.introduction,
             content: articleToSave.content,
             thumbnail: articleToSave.thumbnail,
-            category: articleToSave.category,
+            category_id: articleToSave.category_id || null,
             author_name: articleToSave.authorName,
             user_id: articleToSave.user_id,
             status: articleToSave.status,
@@ -327,7 +327,7 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
             description: articleToSave.introduction,
             content: articleToSave.content,
             thumbnail: articleToSave.thumbnail,
-            category: articleToSave.category,
+            category_id: articleToSave.category_id || null,
             author_name: articleToSave.authorName,
             status: articleToSave.status
           })
@@ -589,14 +589,14 @@ export default function ArticleForm({ mode = 'create', articleData = null, onBac
           </label>
           <div className="relative">
             <select
-              value={formData.category}
-              onChange={(e) => handleInputChange('category', e.target.value)}
+              value={formData.category_id}
+              onChange={(e) => handleInputChange('category_id', e.target.value ? parseInt(e.target.value) : '')}
               className="appearance-none w-full pl-4 pr-10 py-3 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 focus:outline-none focus:border-stone-400 cursor-pointer disabled:opacity-50"
               disabled={uploadingThumbnail || loadingCategories}
             >
               <option value="">{loadingCategories ? "Loading categories..." : "Select category"}</option>
               {categories.map((cat) => (
-                <option key={cat.id} value={cat.name}>
+                <option key={cat.id} value={cat.id}>
                   {cat.name}
                 </option>
               ))}

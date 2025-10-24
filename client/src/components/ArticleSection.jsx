@@ -33,7 +33,7 @@ export default function Articles() {
         let categoriesData = [];
         const categoriesCheckResponse = await supabase
           .from('categories')
-          .select('name')
+          .select('id, name')
           .order('name', { ascending: true });
 
         if (categoriesCheckResponse.error) {
@@ -65,7 +65,7 @@ export default function Articles() {
         // Fetch articles - try Published first, then fallback to all
         let articlesResponse = await supabase
           .from('articles')
-          .select('*', { count: 'exact' })
+          .select(`*, categories (id, name)`, { count: 'exact' })
           .eq('status', 'Published')
           .order('date', { ascending: false });
 
@@ -83,7 +83,7 @@ export default function Articles() {
             // Fetch articles again
             articlesResponse = await supabase
               .from('articles')
-              .select('*', { count: 'exact' })
+              .select(`*, categories (id, name)`, { count: 'exact' })
               .eq('status', 'Published')
               .order('date', { ascending: false });
           }
@@ -144,8 +144,8 @@ export default function Articles() {
     // Filter by category
     if (category !== "Highlight") {
       filtered = filtered.filter(post => {
-        // Check both 'category' and 'type' fields
-        return post.category === category || post.type === category;
+        // Check categories relationship
+        return post.categories?.name === category || post.category === category || post.type === category;
       });
     }
 
@@ -264,7 +264,7 @@ export default function Articles() {
                   key={blog.id}
                   id={blog.id}
                   image={blog.thumbnail}
-                  category={blog.category}
+                  category={blog.categories?.name || blog.category || 'Uncategorized'}
                   title={blog.title}
                   description={blog.description}
                   author={blog.author?.name || blog.author_name || 'Anonymous'}

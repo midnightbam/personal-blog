@@ -39,7 +39,7 @@ export default function ArticleManagementSupabase({
         // Fetch all articles from the new articles table
         const { data: articlesData, error: articlesError } = await supabase
           .from('articles')
-          .select('*')
+          .select('*, categories (id, name)')
           .order('created_at', { ascending: false });
         
         if (articlesError) throw articlesError;
@@ -89,7 +89,7 @@ export default function ArticleManagementSupabase({
   const filteredArticles = articles.filter((article) => {
     const matchesSearch = article.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = !statusFilter || article.status === statusFilter;
-    const matchesCategory = !categoryFilter || article.category === categoryFilter;
+    const matchesCategory = !categoryFilter || article.categories?.name === categoryFilter;
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
@@ -249,7 +249,7 @@ export default function ArticleManagementSupabase({
                 }`}
               >
                 <div className="col-span-6 text-xs text-stone-800 truncate">{article.title}</div>
-                <div className="col-span-2 text-xs text-stone-600">{article.category || '-'}</div>
+                <div className="col-span-2 text-xs text-stone-600">{article.categories?.name || '-'}</div>
                 <div className="col-span-2">
                   {getStatusBadge(article.status)}
                 </div>
@@ -339,7 +339,7 @@ export default function ArticleManagementSupabase({
                 </div>
               </div>
               <div className="flex items-center gap-4 text-xs">
-                <span className="text-stone-600">{article.category || '-'}</span>
+                <span className="text-stone-600">{article.categories?.name || '-'}</span>
                 {getStatusBadge(article.status)}
               </div>
             </div>
