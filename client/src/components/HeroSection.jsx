@@ -15,8 +15,8 @@ const renderFormattedText = (text) => {
     }
 
     // Handle bullet points (• text or - text)
-    if (line.match(/^[•\-]\s/)) {
-      const content = line.replace(/^[•\-]\s/, '');
+    if (line.match(/^[•-]\s/)) {
+      const content = line.replace(/^[•-]\s/, '');
       elements.push(
         <div key={`bullet-${lineIndex}`} className="flex gap-2">
           <span>•</span>
