@@ -15,6 +15,16 @@ import {
 import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { notificationService } from "@/services/notificationService";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 // Custom toast functions
 const toastSuccess = (message, description = "") => {
@@ -58,6 +68,8 @@ export default function ViewPost() {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState(null);
 
   // Scroll to top on mount
   useEffect(() => {
@@ -335,21 +347,29 @@ export default function ViewPost() {
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (!window.confirm("Delete this comment?")) return;
+    setCommentToDelete(commentId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteComment = async () => {
+    if (!commentToDelete) return;
 
     try {
       const { error } = await supabase
         .from('comments')
         .delete()
-        .eq('id', commentId);
+        .eq('id', commentToDelete);
 
       if (error) throw error;
 
-      setComments((prev) => prev.filter((c) => c.id !== commentId));
+      setComments((prev) => prev.filter((c) => c.id !== commentToDelete));
       toastSuccess("Comment deleted");
     } catch (err) {
       console.error("Error deleting comment:", err);
       toastError("Failed to delete comment");
+    } finally {
+      setShowDeleteModal(false);
+      setCommentToDelete(null);
     }
   };
 
@@ -551,6 +571,31 @@ export default function ViewPost() {
           </div>
         </div>
       )}
+
+      {/* Delete Comment Modal */}
+      <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <AlertDialogContent className="sm:max-w-[425px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete Comment
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this comment? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteModal(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteComment}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
